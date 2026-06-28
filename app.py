@@ -1958,7 +1958,7 @@ st.set_page_config(
 
 
 def inject_css() -> None:
-    """Inject clean white dashboard CSS with readable cards and spacious charts."""
+    """Inject polished Pertamina-style CSS with a dark blue gradient canvas and clean white cards."""
     st.markdown(
         f"""
         <style>
@@ -1981,21 +1981,32 @@ def inject_css() -> None:
         }}
 
         .stApp {{
-            background: #FFFFFF !important;
+            background:
+                radial-gradient(circle at 8% 6%, rgba(0,168,89,.34) 0, transparent 25%),
+                radial-gradient(circle at 94% 9%, rgba(227,30,36,.22) 0, transparent 24%),
+                radial-gradient(circle at 70% 90%, rgba(0,102,179,.30) 0, transparent 30%),
+                linear-gradient(135deg, #00152F 0%, #003B73 42%, #005F73 78%, #007C59 100%);
             color: var(--ink);
         }}
 
         .stApp::before {{
-            display: none !important;
-            content: none !important;
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background:
+                linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
+                linear-gradient(180deg, rgba(255,255,255,.025) 1px, transparent 1px);
+            background-size: 42px 42px;
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,.65), transparent 70%);
         }}
 
         .main .block-container {{
             padding-top: 1.1rem;
-            padding-left: 1.25rem;
-            padding-right: 1.25rem;
-            padding-bottom: 2.4rem;
-            max-width: 1840px;
+            padding-left: 1.55rem;
+            padding-right: 1.55rem;
+            padding-bottom: 2rem;
+            max-width: 1600px;
         }}
 
         h1, h2, h3, h4, h5, h6, p, span, label {{
@@ -2076,28 +2087,27 @@ def inject_css() -> None:
 
         /* Header */
         .page-title {{
-            background: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            border-left: 8px solid var(--pertamina-blue);
-            border-radius: 24px;
-            padding: 22px 26px;
+            background:
+                radial-gradient(circle at 84% 8%, rgba(253,185,19,.24), transparent 23%),
+                radial-gradient(circle at 7% 10%, rgba(0,168,89,.26), transparent 20%),
+                linear-gradient(95deg, rgba(0,27,68,.98) 0%, rgba(0,68,128,.95) 50%, rgba(0,124,89,.92) 100%);
+            border: 1px solid rgba(255,255,255,.22);
+            border-radius: 26px;
+            padding: 24px 28px;
             margin: 0 0 18px 0;
-            box-shadow: 0 10px 28px rgba(15,23,42,.08);
+            box-shadow: 0 24px 60px rgba(0,0,0,.20);
             position: relative;
             overflow: hidden;
         }}
         .page-title::after {{
             content:"";
             position:absolute;
-            right:-70px;
-            top:-90px;
-            width:220px;
-            height:220px;
-            border-radius:50%;
-            background: rgba(0,168,89,.08);
+            inset:0;
+            background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,.12) 45%, transparent 70%);
+            transform: translateX(-70%);
         }}
         .page-title h1 {{
-            color: var(--ink) !important;
+            color: #FFFFFF !important;
             margin: 0;
             font-weight: 900;
             font-size: clamp(1.55rem, 2.2vw, 2.25rem);
@@ -2106,7 +2116,7 @@ def inject_css() -> None:
             z-index: 1;
         }}
         .page-title p {{
-            color: var(--muted) !important;
+            color: rgba(255,255,255,.86) !important;
             margin: 8px 0 0 0;
             font-weight: 650;
             font-size: .95rem;
@@ -2116,10 +2126,10 @@ def inject_css() -> None:
 
         /* Filter card */
         .filter-card {{
-            background: #FFFFFF;
-            backdrop-filter: none;
-            border: 1px solid #E2E8F0;
-            box-shadow: 0 10px 26px rgba(15,23,42,.07);
+            background: rgba(255,255,255,.90);
+            backdrop-filter: blur(18px);
+            border: 1px solid rgba(255,255,255,.45);
+            box-shadow: 0 18px 40px rgba(0,0,0,.16);
             border-radius: 22px;
             padding: 16px 18px;
             margin-bottom: 18px;
@@ -2132,23 +2142,19 @@ def inject_css() -> None:
 
         /* Streamlit border containers: make them look like dashboard cards */
         div[data-testid="stVerticalBlockBorderWrapper"] {{
-            background: #FFFFFF !important;
-            border: 1px solid #E2E8F0 !important;
+            background: rgba(255,255,255,.96) !important;
+            border: 1px solid rgba(226,232,240,.78) !important;
             border-radius: 24px !important;
-            box-shadow: 0 10px 28px rgba(15,23,42,.08) !important;
-            backdrop-filter: none;
-            overflow: visible !important;
-        }}
-        div[data-testid="stVerticalBlockBorderWrapper"] > div {{
-            overflow: visible !important;
+            box-shadow: 0 20px 48px rgba(0,0,0,.14) !important;
+            backdrop-filter: blur(16px);
         }}
 
         .section-card {{
-            background: #FFFFFF;
-            border: 1px solid #E2E8F0;
+            background: rgba(255,255,255,.96);
+            border: 1px solid rgba(226,232,240,.78);
             border-radius: 24px;
             padding: 18px;
-            box-shadow: 0 10px 28px rgba(15,23,42,.08);
+            box-shadow: 0 20px 48px rgba(0,0,0,.14);
             margin-bottom: 18px;
         }}
         .section-heading {{
@@ -2177,7 +2183,7 @@ def inject_css() -> None:
             border-radius: 23px;
             padding: 17px 17px 15px 17px;
             min-height: 132px;
-            box-shadow: 0 10px 26px rgba(15,23,42,.08);
+            box-shadow: 0 20px 45px rgba(0,0,0,.15);
             position: relative;
             overflow: hidden;
         }}
@@ -2249,7 +2255,7 @@ def inject_css() -> None:
             padding: 18px;
             background: linear-gradient(135deg, #FFFFFF 0%, #F4FAFF 100%);
             border: 1px solid rgba(226,232,240,.85);
-            box-shadow: 0 10px 26px rgba(15,23,42,.08);
+            box-shadow: 0 18px 40px rgba(0,0,0,.12);
             height: 100%;
         }}
         .insight-title {{
@@ -2289,12 +2295,12 @@ def inject_css() -> None:
             margin-top: 8px;
         }}
 
-        div[data-testid="stMetricValue"] {{ color: var(--ink) !important; }}
-        div[data-testid="stMetricLabel"] {{ color: var(--muted) !important; }}
-        div[data-testid="stMetricDelta"] {{ color: var(--pertamina-green) !important; }}
+        div[data-testid="stMetricValue"] {{ color: #FFFFFF !important; }}
+        div[data-testid="stMetricLabel"] {{ color: rgba(255,255,255,.78) !important; }}
+        div[data-testid="stMetricDelta"] {{ color: #D1FAE5 !important; }}
 
         .stCaption, div[data-testid="stCaptionContainer"] p {{
-            color: #475569 !important;
+            color: rgba(255,255,255,.82) !important;
             font-weight: 600;
         }}
 
@@ -2334,12 +2340,6 @@ def inject_css() -> None:
         }}
         .js-plotly-plot .gtitle {{
             display: none !important;
-        }}
-        .stPlotlyChart, div[data-testid="stPlotlyChart"], div[data-testid="stPlotlyChart"] > div {{
-            overflow: visible !important;
-        }}
-        div[data-testid="stPlotlyChart"] {{
-            padding: 2px 4px 8px 4px;
         }}
 
         @media (max-width: 1100px) {{
@@ -2693,27 +2693,31 @@ def style_numeric_table(data: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def apply_plot_theme(fig: go.Figure, height: int = 400, show_legend: bool = True) -> go.Figure:
-    """Apply a spacious white chart theme so labels and bars are not clipped."""
+def apply_plot_theme(fig: go.Figure, height: int = 360, show_legend: bool = True) -> go.Figure:
+    """Apply a clean, readable corporate chart theme.
+
+    The previous version used transparent plot backgrounds and narrow margins, which made
+    axis labels look washed out on light/gradient backgrounds. This version gives every
+    chart its own white canvas, darker text, safer margins, and better mobile behavior.
+    """
     fig.update_layout(
         template="plotly_white",
         height=height,
         autosize=True,
-        margin=dict(l=105, r=135, t=34, b=86),
+        margin=dict(l=88, r=92, t=18, b=56),
         font=dict(family="Inter, Arial, sans-serif", color="#0B1F3A", size=12),
         title=None,
-        paper_bgcolor="#FFFFFF",
-        plot_bgcolor="#FFFFFF",
+        paper_bgcolor="rgba(255,255,255,0.98)",
+        plot_bgcolor="rgba(248,251,255,0.98)",
         colorway=COLORWAY,
         legend=dict(
             orientation="h",
             yanchor="top",
-            y=-0.22,
+            y=-0.18,
             xanchor="left",
             x=0,
             bgcolor="rgba(255,255,255,0)",
             font=dict(color="#0B1F3A", size=11),
-            tracegroupgap=8,
         ),
         showlegend=show_legend,
         hoverlabel=dict(
@@ -2722,13 +2726,12 @@ def apply_plot_theme(fig: go.Figure, height: int = 400, show_legend: bool = True
             font=dict(color="#FFFFFF", family="Inter, Arial, sans-serif", size=12),
         ),
         uniformtext_minsize=10,
-        uniformtext_mode="show",
+        uniformtext_mode="hide",
     )
     fig.update_xaxes(
         showgrid=True,
-        gridcolor="rgba(148,163,184,.24)",
-        zeroline=True,
-        zerolinecolor="rgba(100,116,139,.35)",
+        gridcolor="rgba(148,163,184,.25)",
+        zeroline=False,
         linecolor="rgba(15,23,42,.18)",
         tickfont=dict(color="#334155", size=11),
         title_font=dict(color="#334155", size=12),
@@ -2737,8 +2740,7 @@ def apply_plot_theme(fig: go.Figure, height: int = 400, show_legend: bool = True
     fig.update_yaxes(
         showgrid=False,
         gridcolor="rgba(148,163,184,.18)",
-        zeroline=True,
-        zerolinecolor="rgba(100,116,139,.25)",
+        zeroline=False,
         linecolor="rgba(15,23,42,.18)",
         tickfont=dict(color="#334155", size=11),
         title_font=dict(color="#334155", size=12),
@@ -2830,22 +2832,6 @@ def safe_axis_max(values: pd.Series | np.ndarray, pad: float = 1.24) -> float:
     return max_value * pad
 
 
-def safe_axis_range(values: pd.Series | np.ndarray, pad: float = 0.28) -> List[float]:
-    """Return a padded axis range that supports positive, negative, and mixed bar values."""
-    arr = pd.to_numeric(pd.Series(values), errors="coerce").dropna()
-    if arr.empty:
-        return [0, 1]
-    min_value = float(arr.min())
-    max_value = float(arr.max())
-
-    if min_value >= 0:
-        return [0, max(max_value * (1 + pad), 1)]
-    if max_value <= 0:
-        return [min_value * (1 + pad), 0]
-
-    return [min_value * (1 + pad), max_value * (1 + pad)]
-
-
 # =============================================================
 # 5. CHART BUILDERS
 # =============================================================
@@ -2884,8 +2870,8 @@ def result_donut(data: pd.DataFrame) -> go.Figure:
         showarrow=False,
         font=dict(color="#0B1F3A", size=16),
     )
-    fig.update_layout(margin=dict(l=26, r=26, t=20, b=20))
-    return apply_plot_theme(fig, height=390, show_legend=False)
+    fig.update_layout(margin=dict(l=18, r=18, t=10, b=10))
+    return apply_plot_theme(fig, height=345, show_legend=False)
 
 
 def gap_band_bar(data: pd.DataFrame, orientation: str = "h") -> go.Figure:
@@ -2913,11 +2899,8 @@ def gap_band_bar(data: pd.DataFrame, orientation: str = "h") -> go.Figure:
     fig.update_layout(xaxis_title="Jumlah Hotel", yaxis_title="")
     if orientation == "h":
         fig.update_xaxes(range=[0, safe_axis_max(counts["Jumlah Hotel"], 1.22)])
-        fig.update_layout(margin=dict(l=140, r=125, t=28, b=68))
-    else:
-        fig.update_xaxes(tickangle=-20, automargin=True)
-        fig.update_layout(margin=dict(l=80, r=110, t=28, b=90))
-    return apply_plot_theme(fig, height=410, show_legend=False)
+        fig.update_layout(margin=dict(l=118, r=76, t=18, b=44))
+    return apply_plot_theme(fig, height=350, show_legend=False)
 
 
 def horizontal_bar(
@@ -2961,9 +2944,9 @@ def horizontal_bar(
         )
     )
     fig.update_layout(xaxis_title="", yaxis_title="")
-    fig.update_xaxes(range=safe_axis_range(ordered[x], 0.34))
-    fig.update_layout(margin=dict(l=210, r=150, t=28, b=64))
-    return apply_plot_theme(fig, height=max(height, 400), show_legend=False)
+    fig.update_xaxes(range=[0, safe_axis_max(ordered[x], 1.30)])
+    fig.update_layout(margin=dict(l=178, r=106, t=18, b=46))
+    return apply_plot_theme(fig, height=height, show_legend=False)
 
 
 def stacked_result_by_group(data: pd.DataFrame, group_col: str, top_n: int = 10) -> go.Figure:
@@ -2984,14 +2967,9 @@ def stacked_result_by_group(data: pd.DataFrame, group_col: str, top_n: int = 10)
         color_discrete_map={"Recommend": COLORS["green"], "Revise": COLORS["yellow"], "Sama": COLORS["blue"]},
         text="Jumlah",
     )
-    fig.update_layout(
-        title=f"Komposisi Result per {group_col}",
-        xaxis_title="Jumlah Hotel",
-        yaxis_title="",
-        margin=dict(l=220, r=135, t=34, b=96),
-    )
-    fig.update_traces(textposition="inside", insidetextanchor="middle", cliponaxis=False)
-    return apply_plot_theme(fig, height=465)
+    fig.update_traces(textposition="inside", textinfo="percent+label", marker=dict(line=dict(color="white", width=2)))
+    fig.update_layout(title="Komposisi Result")
+    return apply_plot_theme(fig, height=420)
 
 
 def scatter_price(data: pd.DataFrame) -> go.Figure:
@@ -3035,7 +3013,7 @@ def scatter_price(data: pd.DataFrame) -> go.Figure:
         xaxis_title="Publish Rate (Rp)",
         yaxis_title="Offering Corporate Rate 2026 (Rp)",
     )
-    return apply_plot_theme(fig, height=485)
+    return apply_plot_theme(fig, height=455)
 
 
 def city_boxplot(data: pd.DataFrame, top_n: int = 8) -> go.Figure:
@@ -3053,8 +3031,7 @@ def city_boxplot(data: pd.DataFrame, top_n: int = 8) -> go.Figure:
     )
     fig.add_hline(y=0, line_dash="dash", line_color=COLORS["red"], opacity=.65)
     fig.update_layout(title="Sebaran Nilai Selisih per Wilayah Utama", xaxis_title="", yaxis_title="Nilai Selisih (Rp)")
-    fig.update_xaxes(tickangle=-25, automargin=True)
-    return apply_plot_theme(fig, height=430, show_legend=False)
+    return apply_plot_theme(fig, height=395, show_legend=False)
 
 
 def waterfall_by_band(data: pd.DataFrame) -> go.Figure:
@@ -3075,9 +3052,8 @@ def waterfall_by_band(data: pd.DataFrame) -> go.Figure:
             totals={"marker": {"color": COLORS["navy"]}},
         )
     )
-    fig.update_traces(cliponaxis=False)
-    fig.update_layout(title="Kontribusi Nilai Selisih per Band Harga", yaxis_title="Nilai Selisih (Rp)", margin=dict(l=95, r=140, t=34, b=96))
-    return apply_plot_theme(fig, height=430, show_legend=False)
+    fig.update_layout(title="Kontribusi Nilai Selisih per Band Harga", yaxis_title="Nilai Selisih (Rp)")
+    return apply_plot_theme(fig, height=380, show_legend=False)
 
 
 def province_map(data: pd.DataFrame) -> go.Figure:
@@ -3113,7 +3089,7 @@ def province_map(data: pd.DataFrame) -> go.Figure:
         mapbox_style="open-street-map",
     )
     fig.update_layout(title="Peta Total Nilai Selisih per Wilayah", coloraxis_colorbar=dict(title="Selisih"))
-    return apply_plot_theme(fig, height=540)
+    return apply_plot_theme(fig, height=505)
 
 
 def group_bubble(data: pd.DataFrame) -> go.Figure:
@@ -3140,7 +3116,7 @@ def group_bubble(data: pd.DataFrame) -> go.Figure:
     )
     fig.add_hline(y=0, line_dash="dash", line_color=COLORS["red"], opacity=.5)
     fig.update_layout(title="Posisi Group: Total Selisih vs Revise", xaxis_title="Jumlah Revise", yaxis_title="Total Selisih (Rp)")
-    return apply_plot_theme(fig, height=430)
+    return apply_plot_theme(fig, height=395)
 
 
 def action_stacked_bar(data: pd.DataFrame) -> go.Figure:
@@ -3154,9 +3130,8 @@ def action_stacked_bar(data: pd.DataFrame) -> go.Figure:
         text="Jumlah",
         color_discrete_map={"Recommend": COLORS["green"], "Revise": COLORS["yellow"], "Sama": COLORS["blue"]},
     )
-    fig.update_layout(title="Action berdasarkan Result", xaxis_title="Next Action", yaxis_title="Jumlah Hotel", margin=dict(l=85, r=120, t=34, b=110))
-    fig.update_xaxes(tickangle=-20, automargin=True)
-    return apply_plot_theme(fig, height=430)
+    fig.update_layout(title="Action berdasarkan Result", xaxis_title="Next Action", yaxis_title="Jumlah Hotel")
+    return apply_plot_theme(fig, height=360)
 
 
 def impact_effort_chart(data: pd.DataFrame) -> go.Figure:
@@ -3386,23 +3361,23 @@ def page_executive_overview(data: pd.DataFrame, metadata: Dict[str, object]) -> 
         return
 
     # Two-by-two chart layout so labels do not collide on laptop screens.
-    row1_left, row1_right = st.columns([1, 1], gap="large")
+    row1_left, row1_right = st.columns([0.92, 1.38])
     with row1_left:
         chart_card("Komposisi Result", result_donut(data), "🍩")
     with row1_right:
         city_top = aggregate_by(data, "City").sort_values("Total Selisih", ascending=False).head(5)
         chart_card(
             "Top 5 City berdasarkan Total Selisih",
-            horizontal_bar(city_top, "Total Selisih", "City", "", COLORS["navy"], 420),
+            horizontal_bar(city_top, "Total Selisih", "City", "", COLORS["navy"], 345),
             "📍",
         )
 
-    row2_left, row2_right = st.columns([1, 1], gap="large")
+    row2_left, row2_right = st.columns([1.38, 0.92])
     with row2_left:
         group_top = aggregate_by(data, "Nama Group/ Non Group").sort_values("Total Selisih", ascending=False).head(5)
         chart_card(
             "Top 5 Group berdasarkan Total Selisih",
-            horizontal_bar(group_top, "Total Selisih", "Nama Group/ Non Group", "", COLORS["green"], 420),
+            horizontal_bar(group_top, "Total Selisih", "Nama Group/ Non Group", "", COLORS["green"], 345),
             "👥",
         )
     with row2_right:
