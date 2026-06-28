@@ -1958,242 +1958,316 @@ st.set_page_config(
 
 
 def inject_css() -> None:
-    """Inject custom CSS for a Pertamina-like blue, red, green corporate look."""
+    """Inject polished Pertamina-style CSS with a dark blue gradient canvas and clean white cards."""
     st.markdown(
         f"""
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+        :root {{
+            --pertamina-navy: {COLORS['navy']};
+            --pertamina-blue: {COLORS['blue']};
+            --pertamina-green: {COLORS['green_2']};
+            --pertamina-red: {COLORS['red']};
+            --pertamina-yellow: {COLORS['yellow']};
+            --ink: #0B1F3A;
+            --muted: #64748B;
+            --card: rgba(255,255,255,.96);
+            --card-border: rgba(226,232,240,.75);
+        }}
 
         html, body, [class*="css"] {{
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }}
 
         .stApp {{
             background:
-                radial-gradient(circle at top left, rgba(0, 168, 89, .08), transparent 28%),
-                radial-gradient(circle at top right, rgba(227, 30, 36, .08), transparent 24%),
-                linear-gradient(135deg, #F8FBFF 0%, #EEF6FF 44%, #F8FBFF 100%);
-            color: {COLORS['black']};
+                radial-gradient(circle at 8% 6%, rgba(0,168,89,.34) 0, transparent 25%),
+                radial-gradient(circle at 94% 9%, rgba(227,30,36,.22) 0, transparent 24%),
+                radial-gradient(circle at 70% 90%, rgba(0,102,179,.30) 0, transparent 30%),
+                linear-gradient(135deg, #00152F 0%, #003B73 42%, #005F73 78%, #007C59 100%);
+            color: var(--ink);
         }}
 
+        .stApp::before {{
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background:
+                linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
+                linear-gradient(180deg, rgba(255,255,255,.025) 1px, transparent 1px);
+            background-size: 42px 42px;
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,.65), transparent 70%);
+        }}
+
+        .main .block-container {{
+            padding-top: 1.1rem;
+            padding-left: 1.55rem;
+            padding-right: 1.55rem;
+            padding-bottom: 2rem;
+            max-width: 1600px;
+        }}
+
+        h1, h2, h3, h4, h5, h6, p, span, label {{
+            letter-spacing: -0.015em;
+        }}
+
+        h1, h2, h3 {{
+            color: var(--ink);
+            font-weight: 900;
+        }}
+
+        /* Sidebar */
         section[data-testid="stSidebar"] {{
-            background: linear-gradient(180deg, {COLORS['navy']} 0%, #01204A 100%);
+            background:
+                radial-gradient(circle at 20% 15%, rgba(0,168,89,.28), transparent 27%),
+                radial-gradient(circle at 90% 2%, rgba(227,30,36,.20), transparent 22%),
+                linear-gradient(180deg, #001C43 0%, #002B5B 55%, #001A3D 100%);
             border-right: 1px solid rgba(255,255,255,.12);
+            box-shadow: 16px 0 45px rgba(0,0,0,.20);
         }}
-
         section[data-testid="stSidebar"] * {{
             color: #EAF4FF !important;
         }}
-
+        section[data-testid="stSidebar"] .stRadio label {{
+            background: transparent;
+            border-radius: 14px;
+            padding: 5px 8px;
+            transition: all .18s ease;
+        }}
+        section[data-testid="stSidebar"] .stRadio label:hover {{
+            background: rgba(255,255,255,.09);
+            transform: translateX(2px);
+        }}
+        section[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {{
+            background: linear-gradient(90deg, rgba(0,102,179,.95), rgba(0,168,89,.70));
+            box-shadow: 0 10px 22px rgba(0,0,0,.18);
+        }}
         section[data-testid="stSidebar"] div[data-baseweb="select"] * {{
             color: #0F172A !important;
         }}
 
-        section[data-testid="stSidebar"] .stRadio label div p {{
-            color: #EAF4FF !important;
-            font-weight: 650;
-        }}
-
-        .main .block-container {{
-            padding-top: 1.25rem;
-            padding-left: 1.75rem;
-            padding-right: 1.75rem;
-            max-width: 1540px;
-        }}
-
-        h1, h2, h3 {{
-            color: {COLORS['navy']};
-            letter-spacing: -0.03em;
-        }}
-
         .logo-wrap {{
             display:flex;
-            gap:12px;
+            gap:13px;
             align-items:center;
-            padding: 10px 2px 22px 2px;
-            border-bottom: 1px solid rgba(255,255,255,.15);
+            padding: 10px 2px 24px 2px;
+            border-bottom: 1px solid rgba(255,255,255,.16);
             margin-bottom: 16px;
         }}
         .logo-bars {{
-            width:42px;
-            height:42px;
+            width:44px;
+            height:44px;
             display:grid;
             grid-template-columns: repeat(3, 1fr);
-            gap:4px;
+            gap:5px;
             align-items:end;
         }}
         .logo-bars span {{
             display:block;
-            border-radius: 8px 8px 4px 4px;
-            box-shadow: 0 10px 24px rgba(0,0,0,.22);
+            border-radius: 9px 9px 5px 5px;
+            box-shadow: 0 12px 24px rgba(0,0,0,.26);
         }}
-        .logo-bars span:nth-child(1) {{ height: 24px; background:{COLORS['blue']}; }}
-        .logo-bars span:nth-child(2) {{ height: 38px; background:{COLORS['green_2']}; }}
-        .logo-bars span:nth-child(3) {{ height: 30px; background:{COLORS['red']}; }}
+        .logo-bars span:nth-child(1) {{ height: 24px; background: var(--pertamina-blue); }}
+        .logo-bars span:nth-child(2) {{ height: 39px; background: var(--pertamina-green); }}
+        .logo-bars span:nth-child(3) {{ height: 31px; background: var(--pertamina-red); }}
         .logo-text-title {{
-            font-weight: 850;
-            line-height: 1.05;
-            color: white !important;
-            font-size: 1rem;
+            font-weight: 900;
+            line-height: 1.08;
+            color: #FFFFFF !important;
+            font-size: 1.03rem;
         }}
         .logo-text-sub {{
-            font-weight: 500;
-            color: rgba(255,255,255,.76) !important;
+            font-weight: 650;
+            color: rgba(255,255,255,.78) !important;
             font-size: .72rem;
-            margin-top: 3px;
-        }}
-
-        .page-title {{
-            background: linear-gradient(90deg, {COLORS['navy']} 0%, {COLORS['blue']} 54%, {COLORS['green']} 100%);
-            border-radius: 22px;
-            padding: 22px 26px;
-            margin-bottom: 18px;
-            box-shadow: 0 18px 42px rgba(0,43,91,.16);
-            position: relative;
-            overflow: hidden;
-        }}
-        .page-title:after {{
-            content:"";
-            position:absolute;
-            width: 340px;
-            height: 340px;
-            background: radial-gradient(circle, rgba(253,185,19,.22) 0%, transparent 65%);
-            right: -120px;
-            top: -180px;
-        }}
-        .page-title h1 {{
-            color: white !important;
-            margin: 0;
-            font-weight: 850;
-            font-size: 2rem;
-        }}
-        .page-title p {{
-            color: rgba(255,255,255,.84);
-            margin: 6px 0 0 0;
-            font-weight: 500;
-            font-size: .95rem;
-        }}
-
-        .filter-card {{
-            background: rgba(255,255,255,.88);
-            border: 1px solid rgba(0,43,91,.08);
-            box-shadow: 0 12px 34px rgba(15, 23, 42, .08);
-            border-radius: 18px;
-            padding: 14px 16px;
-            margin-bottom: 18px;
-        }}
-
-        .kpi-card {{
-            background: rgba(255,255,255,.92);
-            border: 1px solid rgba(0,43,91,.08);
-            border-radius: 18px;
-            padding: 18px 18px 16px 18px;
-            min-height: 126px;
-            box-shadow: 0 16px 32px rgba(15,23,42,.08);
-            position: relative;
-            overflow: hidden;
-        }}
-        .kpi-card:after {{
-            content:"";
-            position:absolute;
-            width:160px;
-            height:160px;
-            right:-95px;
-            top:-95px;
-            border-radius:50%;
-            background: rgba(0,102,179,.08);
-        }}
-        .kpi-card.kpi-green:after {{ background: rgba(0,168,89,.12); }}
-        .kpi-card.kpi-red:after {{ background: rgba(227,30,36,.11); }}
-        .kpi-card.kpi-yellow:after {{ background: rgba(253,185,19,.18); }}
-        .kpi-card.kpi-navy:after {{ background: rgba(0,43,91,.12); }}
-        .kpi-top {{
-            display:flex;
-            justify-content:space-between;
-            gap:12px;
-            align-items:flex-start;
-        }}
-        .kpi-icon {{
-            width: 46px;
-            height: 46px;
-            border-radius: 14px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            background: linear-gradient(135deg, {COLORS['navy']} 0%, {COLORS['blue']} 100%);
-            color: #fff;
-            font-size: 1.2rem;
-            box-shadow: 0 10px 20px rgba(0,43,91,.18);
-        }}
-        .kpi-green .kpi-icon {{ background: linear-gradient(135deg, #007C57, {COLORS['green_2']}); }}
-        .kpi-red .kpi-icon {{ background: linear-gradient(135deg, #B91C1C, {COLORS['red']}); }}
-        .kpi-yellow .kpi-icon {{ background: linear-gradient(135deg, #D97706, {COLORS['yellow']}); }}
-        .kpi-navy .kpi-icon {{ background: linear-gradient(135deg, #001B44, {COLORS['navy']}); }}
-        .kpi-label {{
-            font-size: .78rem;
-            color: {COLORS['gray']};
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: .055em;
-            margin-top: 11px;
-        }}
-        .kpi-value {{
-            color: {COLORS['navy']};
-            font-size: 1.75rem;
-            font-weight: 850;
-            line-height: 1.1;
             margin-top: 4px;
         }}
-        .kpi-note {{
-            color: #64748B;
-            font-size: .78rem;
-            font-weight: 550;
-            margin-top: 7px;
+
+        /* Header */
+        .page-title {{
+            background:
+                radial-gradient(circle at 84% 8%, rgba(253,185,19,.24), transparent 23%),
+                radial-gradient(circle at 7% 10%, rgba(0,168,89,.26), transparent 20%),
+                linear-gradient(95deg, rgba(0,27,68,.98) 0%, rgba(0,68,128,.95) 50%, rgba(0,124,89,.92) 100%);
+            border: 1px solid rgba(255,255,255,.22);
+            border-radius: 26px;
+            padding: 24px 28px;
+            margin: 0 0 18px 0;
+            box-shadow: 0 24px 60px rgba(0,0,0,.20);
+            position: relative;
+            overflow: hidden;
+        }}
+        .page-title::after {{
+            content:"";
+            position:absolute;
+            inset:0;
+            background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,.12) 45%, transparent 70%);
+            transform: translateX(-70%);
+        }}
+        .page-title h1 {{
+            color: #FFFFFF !important;
+            margin: 0;
+            font-weight: 900;
+            font-size: clamp(1.55rem, 2.2vw, 2.25rem);
+            line-height: 1.08;
+            position: relative;
+            z-index: 1;
+        }}
+        .page-title p {{
+            color: rgba(255,255,255,.86) !important;
+            margin: 8px 0 0 0;
+            font-weight: 650;
+            font-size: .95rem;
+            position: relative;
+            z-index: 1;
+        }}
+
+        /* Filter card */
+        .filter-card {{
+            background: rgba(255,255,255,.90);
+            backdrop-filter: blur(18px);
+            border: 1px solid rgba(255,255,255,.45);
+            box-shadow: 0 18px 40px rgba(0,0,0,.16);
+            border-radius: 22px;
+            padding: 16px 18px;
+            margin-bottom: 18px;
+        }}
+        div[data-baseweb="select"] > div {{
+            border-radius: 13px !important;
+            border-color: rgba(0,43,91,.14) !important;
+            box-shadow: 0 6px 16px rgba(15,23,42,.05) !important;
+        }}
+
+        /* Streamlit border containers: make them look like dashboard cards */
+        div[data-testid="stVerticalBlockBorderWrapper"] {{
+            background: rgba(255,255,255,.96) !important;
+            border: 1px solid rgba(226,232,240,.78) !important;
+            border-radius: 24px !important;
+            box-shadow: 0 20px 48px rgba(0,0,0,.14) !important;
+            backdrop-filter: blur(16px);
         }}
 
         .section-card {{
-            background: rgba(255,255,255,.93);
-            border: 1px solid rgba(0,43,91,.08);
-            border-radius: 18px;
+            background: rgba(255,255,255,.96);
+            border: 1px solid rgba(226,232,240,.78);
+            border-radius: 24px;
             padding: 18px;
-            box-shadow: 0 12px 28px rgba(15,23,42,.075);
+            box-shadow: 0 20px 48px rgba(0,0,0,.14);
             margin-bottom: 18px;
         }}
         .section-heading {{
-            color: {COLORS['navy']};
-            font-weight: 850;
-            font-size: 1.05rem;
-            margin-bottom: .55rem;
+            color: var(--ink) !important;
+            font-weight: 900;
+            font-size: 1.04rem;
+            margin: 0 0 .65rem 0;
             display:flex;
             align-items:center;
-            gap:.55rem;
+            gap:.62rem;
         }}
         .section-heading .dot {{
-            width: 10px;
-            height: 10px;
-            background: linear-gradient(135deg, {COLORS['red']}, {COLORS['green_2']});
+            width: 12px;
+            height: 12px;
+            background: linear-gradient(135deg, var(--pertamina-red), var(--pertamina-green));
             border-radius:50%;
             display:inline-block;
+            box-shadow: 0 0 0 4px rgba(0,168,89,.10);
+        }}
+
+        /* KPI cards */
+        .kpi-card {{
+            background:
+                linear-gradient(180deg, rgba(255,255,255,.98), rgba(245,249,255,.96));
+            border: 1px solid rgba(255,255,255,.65);
+            border-radius: 23px;
+            padding: 17px 17px 15px 17px;
+            min-height: 132px;
+            box-shadow: 0 20px 45px rgba(0,0,0,.15);
+            position: relative;
+            overflow: hidden;
+        }}
+        .kpi-card::before {{
+            content:"";
+            position:absolute;
+            left:0;
+            right:0;
+            top:0;
+            height:4px;
+            background: linear-gradient(90deg, var(--pertamina-blue), var(--pertamina-green), var(--pertamina-red));
+        }}
+        .kpi-card::after {{
+            content:"";
+            position:absolute;
+            width:165px;
+            height:165px;
+            right:-96px;
+            top:-98px;
+            border-radius:50%;
+            background: rgba(0,102,179,.10);
+        }}
+        .kpi-card.kpi-green::after {{ background: rgba(0,168,89,.13); }}
+        .kpi-card.kpi-red::after {{ background: rgba(227,30,36,.12); }}
+        .kpi-card.kpi-yellow::after {{ background: rgba(253,185,19,.18); }}
+        .kpi-card.kpi-navy::after {{ background: rgba(0,43,91,.13); }}
+        .kpi-icon {{
+            width: 46px;
+            height: 46px;
+            border-radius: 16px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background: linear-gradient(135deg, #001B44 0%, var(--pertamina-blue) 100%);
+            color: #fff !important;
+            font-size: 1.12rem;
+            font-weight: 900;
+            box-shadow: 0 12px 24px rgba(0,43,91,.20);
+        }}
+        .kpi-green .kpi-icon {{ background: linear-gradient(135deg, #007C57, var(--pertamina-green)); }}
+        .kpi-red .kpi-icon {{ background: linear-gradient(135deg, #B91C1C, var(--pertamina-red)); }}
+        .kpi-yellow .kpi-icon {{ background: linear-gradient(135deg, #D97706, var(--pertamina-yellow)); }}
+        .kpi-navy .kpi-icon {{ background: linear-gradient(135deg, #001B44, var(--pertamina-blue)); }}
+        .kpi-label {{
+            font-size: .72rem;
+            color: var(--muted) !important;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            margin-top: 11px;
+        }}
+        .kpi-value {{
+            color: var(--ink) !important;
+            font-size: clamp(1.22rem, 1.8vw, 1.72rem);
+            font-weight: 900;
+            line-height: 1.08;
+            margin-top: 4px;
+            white-space: nowrap;
+        }}
+        .kpi-note {{
+            color: var(--muted) !important;
+            font-size: .76rem;
+            font-weight: 650;
+            margin-top: 7px;
         }}
 
         .insight-card {{
-            border-radius: 18px;
+            border-radius: 22px;
             padding: 18px;
             background: linear-gradient(135deg, #FFFFFF 0%, #F4FAFF 100%);
-            border: 1px solid rgba(0,43,91,.08);
-            box-shadow: 0 14px 28px rgba(15,23,42,.075);
+            border: 1px solid rgba(226,232,240,.85);
+            box-shadow: 0 18px 40px rgba(0,0,0,.12);
             height: 100%;
         }}
         .insight-title {{
-            color: {COLORS['navy']};
-            font-weight: 850;
+            color: var(--ink) !important;
+            font-weight: 900;
             font-size: .98rem;
             margin-bottom: 6px;
         }}
         .insight-body {{
-            color: #475569;
+            color: #475569 !important;
             font-size: .9rem;
-            line-height: 1.46;
+            line-height: 1.5;
         }}
         .pill {{
             display:inline-flex;
@@ -2201,45 +2275,77 @@ def inject_css() -> None:
             gap: 6px;
             border-radius: 999px;
             padding: 5px 10px;
-            font-weight: 800;
-            font-size: .76rem;
+            font-weight: 900;
+            font-size: .75rem;
             border: 1px solid rgba(0,43,91,.08);
             background: #EFF6FF;
-            color: {COLORS['navy']};
+            color: var(--ink) !important;
         }}
-        .pill-green {{ background: {COLORS['light_green']}; color: {COLORS['green']}; }}
-        .pill-red {{ background: {COLORS['light_red']}; color: {COLORS['red']}; }}
-        .pill-yellow {{ background: {COLORS['light_yellow']}; color: #B45309; }}
+        .pill-green {{ background: {COLORS['light_green']}; color: {COLORS['green']} !important; }}
+        .pill-red {{ background: {COLORS['light_red']}; color: {COLORS['red']} !important; }}
+        .pill-yellow {{ background: {COLORS['light_yellow']}; color: #B45309 !important; }}
+
         .footer-band {{
-            background: linear-gradient(90deg, {COLORS['navy']}, {COLORS['blue']});
-            color: white;
-            border-radius: 18px;
-            padding: 16px 18px;
-            font-weight: 750;
-            box-shadow: 0 16px 34px rgba(0,43,91,.18);
+            background: linear-gradient(90deg, #001B44, #0066B3, #007C59);
+            color: white !important;
+            border-radius: 20px;
+            padding: 17px 18px;
+            font-weight: 800;
+            box-shadow: 0 18px 38px rgba(0,0,0,.18);
             margin-top: 8px;
         }}
 
+        div[data-testid="stMetricValue"] {{ color: #FFFFFF !important; }}
+        div[data-testid="stMetricLabel"] {{ color: rgba(255,255,255,.78) !important; }}
+        div[data-testid="stMetricDelta"] {{ color: #D1FAE5 !important; }}
+
+        .stCaption, div[data-testid="stCaptionContainer"] p {{
+            color: rgba(255,255,255,.82) !important;
+            font-weight: 600;
+        }}
+
+        .stDataFrame {{
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 10px 24px rgba(15,23,42,.08);
+        }}
         .dataframe th {{
-            background-color: {COLORS['navy']} !important;
+            background-color: var(--pertamina-navy) !important;
             color: white !important;
         }}
 
-        div[data-testid="stMetricValue"] {{
-            color: {COLORS['navy']} !important;
-        }}
         div[data-testid="stDownloadButton"] button,
         div[data-testid="stButton"] button {{
-            border-radius: 12px;
+            border-radius: 13px;
             border: 1px solid rgba(0,43,91,.14);
-            background: linear-gradient(135deg, {COLORS['navy']} 0%, {COLORS['blue']} 100%);
-            color: white;
-            font-weight: 750;
+            background: linear-gradient(135deg, #001B44 0%, #0066B3 100%);
+            color: white !important;
+            font-weight: 800;
         }}
         div[data-testid="stDownloadButton"] button:hover,
         div[data-testid="stButton"] button:hover {{
-            border-color: {COLORS['green_2']};
-            box-shadow: 0 12px 22px rgba(0,102,179,.18);
+            border-color: var(--pertamina-green);
+            box-shadow: 0 12px 24px rgba(0,102,179,.22);
+        }}
+
+        /* Plotly: force readable labels. This fixes white/washed-out chart text. */
+        .js-plotly-plot .plotly text {{
+            fill: #0B1F3A !important;
+            font-family: 'Inter', Arial, sans-serif !important;
+            font-weight: 650 !important;
+        }}
+        .js-plotly-plot .legendtext {{
+            fill: #0B1F3A !important;
+            font-size: 12px !important;
+        }}
+        .js-plotly-plot .gtitle {{
+            display: none !important;
+        }}
+
+        @media (max-width: 1100px) {{
+            .main .block-container {{ padding-left: .85rem; padding-right: .85rem; }}
+            .page-title {{ padding: 20px; }}
+            .kpi-card {{ min-height: 118px; }}
         }}
         </style>
         """,
@@ -2588,19 +2694,58 @@ def style_numeric_table(data: pd.DataFrame) -> pd.DataFrame:
 
 
 def apply_plot_theme(fig: go.Figure, height: int = 360, show_legend: bool = True) -> go.Figure:
+    """Apply a clean, readable corporate chart theme.
+
+    The previous version used transparent plot backgrounds and narrow margins, which made
+    axis labels look washed out on light/gradient backgrounds. This version gives every
+    chart its own white canvas, darker text, safer margins, and better mobile behavior.
+    """
     fig.update_layout(
         template="plotly_white",
         height=height,
-        margin=dict(l=18, r=18, t=54, b=26),
-        font=dict(family="Inter, Arial, sans-serif", color=COLORS["black"]),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
+        autosize=True,
+        margin=dict(l=88, r=92, t=18, b=56),
+        font=dict(family="Inter, Arial, sans-serif", color="#0B1F3A", size=12),
+        title=None,
+        paper_bgcolor="rgba(255,255,255,0.98)",
+        plot_bgcolor="rgba(248,251,255,0.98)",
         colorway=COLORWAY,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.18,
+            xanchor="left",
+            x=0,
+            bgcolor="rgba(255,255,255,0)",
+            font=dict(color="#0B1F3A", size=11),
+        ),
         showlegend=show_legend,
+        hoverlabel=dict(
+            bgcolor="#0B1F3A",
+            bordercolor="rgba(255,255,255,.45)",
+            font=dict(color="#FFFFFF", family="Inter, Arial, sans-serif", size=12),
+        ),
+        uniformtext_minsize=10,
+        uniformtext_mode="hide",
     )
-    fig.update_xaxes(showgrid=True, gridcolor="rgba(100,116,139,.16)", zeroline=False)
-    fig.update_yaxes(showgrid=True, gridcolor="rgba(100,116,139,.16)", zeroline=False)
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="rgba(148,163,184,.25)",
+        zeroline=False,
+        linecolor="rgba(15,23,42,.18)",
+        tickfont=dict(color="#334155", size=11),
+        title_font=dict(color="#334155", size=12),
+        automargin=True,
+    )
+    fig.update_yaxes(
+        showgrid=False,
+        gridcolor="rgba(148,163,184,.18)",
+        zeroline=False,
+        linecolor="rgba(15,23,42,.18)",
+        tickfont=dict(color="#334155", size=11),
+        title_font=dict(color="#334155", size=12),
+        automargin=True,
+    )
     return fig
 
 
@@ -2645,11 +2790,10 @@ def insight_card(title: str, body: str, badge: str = "", badge_type: str = "") -
 
 
 def chart_card(title: str, fig: go.Figure, icon: str = "") -> None:
-    with st.container(border=False):
-        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    """Render a chart inside a real Streamlit bordered container so the card is not broken."""
+    with st.container(border=True):
         section_header(title, icon)
         st.plotly_chart(fig, use_container_width=True, config=CONFIG)
-        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def dataframe_card(title: str, data: pd.DataFrame, icon: str = "📋", height: int = 330) -> None:
@@ -2670,6 +2814,24 @@ def to_excel_bytes(data: pd.DataFrame) -> bytes:
     return output.getvalue()
 
 
+
+
+def shorten_label(value: object, max_len: int = 24) -> str:
+    """Shorten long category labels for narrow chart columns without changing source data."""
+    text = str(value)
+    return text if len(text) <= max_len else text[: max_len - 1].rstrip() + "…"
+
+
+def safe_axis_max(values: pd.Series | np.ndarray, pad: float = 1.24) -> float:
+    """Return a padded positive axis maximum for value labels outside bars."""
+    if values is None or len(values) == 0:
+        return 1.0
+    max_value = float(np.nanmax(values)) if len(values) else 1.0
+    if not np.isfinite(max_value) or max_value <= 0:
+        return 1.0
+    return max_value * pad
+
+
 # =============================================================
 # 5. CHART BUILDERS
 # =============================================================
@@ -2678,18 +2840,38 @@ def to_excel_bytes(data: pd.DataFrame) -> bytes:
 def result_donut(data: pd.DataFrame) -> go.Figure:
     counts = data["Result"].value_counts().reset_index()
     counts.columns = ["Result", "Jumlah"]
-    color_map = {"Recommend": COLORS["green"], "Revise": COLORS["yellow"], "Sama": COLORS["blue"], "Tidak Ada": COLORS["gray"]}
+    color_map = {
+        "Recommend": COLORS["green"],
+        "Revise": COLORS["yellow"],
+        "Sama": COLORS["blue"],
+        "Tidak Ada": COLORS["gray"],
+    }
     fig = px.pie(
         counts,
         names="Result",
         values="Jumlah",
-        hole=0.62,
+        hole=0.64,
         color="Result",
         color_discrete_map=color_map,
     )
-    fig.update_traces(textposition="inside", textinfo="percent+label", marker=dict(line=dict(color="white", width=2)))
-    fig.update_layout(title="Komposisi Result")
-    return apply_plot_theme(fig, height=330)
+    fig.update_traces(
+        sort=False,
+        textposition="inside",
+        textinfo="label+percent",
+        insidetextorientation="radial",
+        textfont=dict(color="#FFFFFF", size=12, family="Inter, Arial, sans-serif"),
+        marker=dict(line=dict(color="#FFFFFF", width=4)),
+        hovertemplate="%{label}<br>%{value:,.0f} hotel<br>%{percent}<extra></extra>",
+    )
+    fig.add_annotation(
+        text=f"<b>{len(data):,.0f}</b><br><span style='font-size:11px'>Hotel</span>".replace(",", "."),
+        x=0.5,
+        y=0.5,
+        showarrow=False,
+        font=dict(color="#0B1F3A", size=16),
+    )
+    fig.update_layout(margin=dict(l=18, r=18, t=10, b=10))
+    return apply_plot_theme(fig, height=345, show_legend=False)
 
 
 def gap_band_bar(data: pd.DataFrame, orientation: str = "h") -> go.Figure:
@@ -2706,9 +2888,19 @@ def gap_band_bar(data: pd.DataFrame, orientation: str = "h") -> go.Figure:
         color="Band Selisih",
         color_discrete_map=dict(zip(order, colors)),
     )
-    fig.update_traces(textposition="outside", cliponaxis=False)
-    fig.update_layout(title="Distribusi Nilai Selisih", xaxis_title="Jumlah Hotel", yaxis_title="")
-    return apply_plot_theme(fig, height=330, show_legend=False)
+    fig.update_traces(
+        textposition="outside",
+        textfont=dict(color="#0B1F3A", size=12, family="Inter, Arial, sans-serif"),
+        marker_line_color="rgba(255,255,255,.85)",
+        marker_line_width=1.2,
+        cliponaxis=False,
+        hovertemplate="%{y}<br>Jumlah: %{x:,.0f} hotel<extra></extra>" if orientation == "h" else "%{x}<br>Jumlah: %{y:,.0f} hotel<extra></extra>",
+    )
+    fig.update_layout(xaxis_title="Jumlah Hotel", yaxis_title="")
+    if orientation == "h":
+        fig.update_xaxes(range=[0, safe_axis_max(counts["Jumlah Hotel"], 1.22)])
+        fig.update_layout(margin=dict(l=118, r=76, t=18, b=44))
+    return apply_plot_theme(fig, height=350, show_legend=False)
 
 
 def horizontal_bar(
@@ -2721,26 +2913,39 @@ def horizontal_bar(
     text_format: str = "money",
 ) -> go.Figure:
     if data.empty:
-        return apply_plot_theme(go.Figure(), height=height)
-    ordered = data.sort_values(x, ascending=True)
+        return apply_plot_theme(go.Figure(), height=height, show_legend=False)
+
+    ordered = data.sort_values(x, ascending=True).copy()
+    ordered["_label_short"] = ordered[y].map(lambda v: shorten_label(v, 28))
+
     if text_format == "money":
         text = ordered[x].map(lambda v: format_rupiah(v, compact=True))
     elif text_format == "pct":
         text = ordered[x].map(lambda v: format_pct(v))
     else:
         text = ordered[x].map(lambda v: format_number(v))
+
     fig = go.Figure(
         go.Bar(
             x=ordered[x],
-            y=ordered[y],
+            y=ordered["_label_short"],
             orientation="h",
-            marker=dict(color=color, line=dict(color="rgba(255,255,255,.7)", width=1)),
+            marker=dict(
+                color=color,
+                line=dict(color="rgba(255,255,255,.88)", width=1.2),
+                cornerradius=7,
+            ),
             text=text,
             textposition="outside",
-            hovertemplate=f"%{{y}}<br>{x}: %{{x:,.0f}}<extra></extra>",
+            textfont=dict(color="#0B1F3A", size=12, family="Inter, Arial, sans-serif"),
+            customdata=np.stack([ordered[y].astype(str), ordered[x]], axis=-1),
+            hovertemplate="%{customdata[0]}<br>" + x + ": %{customdata[1]:,.0f}<extra></extra>",
+            cliponaxis=False,
         )
     )
-    fig.update_layout(title=title, xaxis_title="", yaxis_title="")
+    fig.update_layout(xaxis_title="", yaxis_title="")
+    fig.update_xaxes(range=[0, safe_axis_max(ordered[x], 1.30)])
+    fig.update_layout(margin=dict(l=178, r=106, t=18, b=46))
     return apply_plot_theme(fig, height=height, show_legend=False)
 
 
@@ -3154,17 +3359,30 @@ def page_executive_overview(data: pd.DataFrame, metadata: Dict[str, object]) -> 
         empty_state()
         return
 
-    left, mid, right = st.columns([1.05, 1.35, 1.35])
-    with left:
+    # Two-by-two chart layout so labels do not collide on laptop screens.
+    row1_left, row1_right = st.columns([0.92, 1.38])
+    with row1_left:
         chart_card("Komposisi Result", result_donut(data), "🍩")
-    with mid:
+    with row1_right:
         city_top = aggregate_by(data, "City").sort_values("Total Selisih", ascending=False).head(5)
-        chart_card("Top 5 City berdasarkan Total Selisih", horizontal_bar(city_top, "Total Selisih", "City", "", COLORS["navy"], 330), "📍")
-    with right:
-        group_top = aggregate_by(data, "Nama Group/ Non Group").sort_values("Total Selisih", ascending=False).head(5)
-        chart_card("Top 5 Group berdasarkan Total Selisih", horizontal_bar(group_top, "Total Selisih", "Nama Group/ Non Group", "", COLORS["green"], 330), "👥")
+        chart_card(
+            "Top 5 City berdasarkan Total Selisih",
+            horizontal_bar(city_top, "Total Selisih", "City", "", COLORS["navy"], 345),
+            "📍",
+        )
 
-    left2, right2 = st.columns([1.4, .95])
+    row2_left, row2_right = st.columns([1.38, 0.92])
+    with row2_left:
+        group_top = aggregate_by(data, "Nama Group/ Non Group").sort_values("Total Selisih", ascending=False).head(5)
+        chart_card(
+            "Top 5 Group berdasarkan Total Selisih",
+            horizontal_bar(group_top, "Total Selisih", "Nama Group/ Non Group", "", COLORS["green"], 345),
+            "👥",
+        )
+    with row2_right:
+        chart_card("Distribusi Nilai Selisih", gap_band_bar(data), "📊")
+
+    left2, right2 = st.columns([1.35, .95])
     with left2:
         top_table = data.sort_values("Nilai Selisih", ascending=False).head(12)[
             [
@@ -3180,7 +3398,6 @@ def page_executive_overview(data: pd.DataFrame, metadata: Dict[str, object]) -> 
         ]
         dataframe_card("Snapshot Hotel dengan Selisih Tertinggi", style_numeric_table(top_table), "🏨", 410)
     with right2:
-        chart_card("Distribusi Nilai Selisih", gap_band_bar(data), "📊")
         top_city = aggregate_by(data, "City").sort_values("Total Selisih", ascending=False).head(3)
         top_city_names = ", ".join(top_city["City"].tolist()) if not top_city.empty else "-"
         insight_card(
@@ -3819,8 +4036,6 @@ def main() -> None:
     page_title(page)
     filtered, context = global_filters(data)
 
-    sidebar_downloads(filtered)
-
     st.caption(
         f"Filter aktif: City = {context['city']} · Group = {context['group']} · Result = {context['result']} · "
         f"Next Action = {context['action']} · Band = {context['band']} · Record tampil = {len(filtered):,}".replace(",", ".")
@@ -3850,7 +4065,7 @@ def main() -> None:
     st.markdown("---")
     st.caption(
         "Dashboard ini dibuat untuk analisis Corporate Rate Hotel Pertamina 2026. "
-        "Semua metrik mengikuti filter aktif dan dapat diekspor dari sidebar."
+        "Semua metrik mengikuti filter aktif dan otomatis membaca dataset dari aplikasi."
     )
 
 
