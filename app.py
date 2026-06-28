@@ -3250,6 +3250,7 @@ def data_source_selector() -> pd.DataFrame:
         except ValueError:
             shown_path = dataset_path
         st.sidebar.markdown("---")
+        st.sidebar.caption(f"📁 Dataset aktif: `{shown_path}`")
         return cached_read_excel_path(str(dataset_path))
 
     # Fallback: embedded Excel bytes inside app.py, so Streamlit Cloud still works
