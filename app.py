@@ -1,7 +1,7 @@
 # =============================================================
 # Dashboard Corporate Rate Hotel Pertamina 2026
 # Streamlit single-file application
-# Author: Generated for user request
+# Author: Caroline Cristine Sirait
 # =============================================================
 
 from __future__ import annotations
