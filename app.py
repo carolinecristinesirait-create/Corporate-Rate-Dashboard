@@ -26,6 +26,30 @@ APP_TITLE = "Dashboard Corporate Rate Hotel Pertamina 2026"
 APP_SUBTITLE = "Executive pricing intelligence untuk perpanjangan kontrak hotel"
 ROOT_DIR = Path(__file__).resolve().parent
 DEFAULT_DATA_PATH = ROOT_DIR / "data" / "corporate_rate_hotel_pertamina_2026.xlsx"
+DATA_FILE_HINTS = [
+    "corporate_rate_hotel_pertamina_2026.xlsx",
+    "Laporan KP_Daftar Corporate Rate Hotel Pertamina 2026(1).xlsx",
+    "Laporan KP_Daftar Corporate Rate Hotel Pertamina 2026.xlsx",
+]
+
+
+def locate_default_dataset() -> Optional[Path]:
+    """Find the Excel dataset even if GitHub users place it in root or data/."""
+    candidates = [DEFAULT_DATA_PATH]
+    for filename in DATA_FILE_HINTS:
+        candidates.extend([ROOT_DIR / filename, ROOT_DIR / "data" / filename])
+    for path in candidates:
+        if path.exists() and path.is_file():
+            return path
+
+    # Last-resort recursive search inside the repo/app folder.
+    # Useful when GitHub upload keeps the original Excel name or nests it once.
+    keywords = ("corporate", "rate", "hotel", "pertamina")
+    for path in ROOT_DIR.rglob("*.xlsx"):
+        lower_name = path.name.lower()
+        if any(keyword in lower_name for keyword in keywords):
+            return path
+    return None
 
 REQUIRED_COLUMNS = [
     "No",
@@ -1251,10 +1275,38 @@ def data_source_selector() -> pd.DataFrame:
         raw = cached_read_excel_bytes(uploaded.getvalue())
         st.sidebar.success("Dataset upload berhasil dipakai.")
         return raw
-    if DEFAULT_DATA_PATH.exists():
-        st.sidebar.caption(f"Default: `{DEFAULT_DATA_PATH.name}`")
-        return cached_read_excel_path(str(DEFAULT_DATA_PATH))
-    st.error("File dataset tidak ditemukan. Upload file Excel lewat sidebar atau letakkan file di folder data/.")
+    dataset_path = locate_default_dataset()
+    if dataset_path is not None:
+        try:
+            shown_path = dataset_path.relative_to(ROOT_DIR)
+        except ValueError:
+            shown_path = dataset_path
+        st.sidebar.caption(f"Default: `{shown_path}`")
+        return cached_read_excel_path(str(dataset_path))
+
+    st.error(
+        "File dataset tidak ditemukan. Upload file Excel lewat sidebar atau pastikan file Excel ikut ter-push ke GitHub."
+    )
+    with st.expander("Cara memperbaiki supaya permanen di Streamlit Cloud", expanded=True):
+        st.markdown(
+            """
+            **Solusi paling aman:** di repository GitHub, pastikan ada file:
+
+            `data/corporate_rate_hotel_pertamina_2026.xlsx`
+
+            Struktur minimal repository harus seperti ini:
+
+            ```text
+            app.py
+            requirements.txt
+            data/
+              corporate_rate_hotel_pertamina_2026.xlsx
+            ```
+
+            Kalau hanya ingin coba cepat, buka sidebar **Data Source**, lalu upload file Excel.
+            Namun upload lewat sidebar bersifat sementara dan perlu upload ulang saat app reload.
+            """
+        )
     st.stop()
 
 
