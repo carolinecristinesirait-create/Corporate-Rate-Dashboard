@@ -2838,40 +2838,105 @@ def safe_axis_max(values: pd.Series | np.ndarray, pad: float = 1.24) -> float:
 
 
 def result_donut(data: pd.DataFrame) -> go.Figure:
-    counts = data["Result"].value_counts().reset_index()
+    """Donut Komposisi Result: besar, bersih, label langsung di dalam slice."""
+
+    order = ["Recommend", "Revise", "Sama"]
+    counts = (
+        data["Result"]
+        .astype(str)
+        .str.strip()
+        .value_counts()
+        .reindex(order, fill_value=0)
+        .reset_index()
+    )
     counts.columns = ["Result", "Jumlah"]
+    counts = counts[counts["Jumlah"] > 0].copy()
+
+    if counts.empty:
+        fig = go.Figure()
+        fig.update_layout(
+            template="plotly_white",
+            height=430,
+            margin=dict(l=0, r=0, t=0, b=0),
+            paper_bgcolor="#EAF3FB",
+            plot_bgcolor="#EAF3FB",
+            annotations=[
+                dict(
+                    text="Tidak ada data",
+                    x=0.5,
+                    y=0.5,
+                    showarrow=False,
+                    font=dict(color="#0B1F3A", size=15, family="Inter, Arial, sans-serif"),
+                )
+            ],
+        )
+        return fig
+
     color_map = {
         "Recommend": COLORS["green"],
         "Revise": COLORS["yellow"],
         "Sama": COLORS["blue"],
-        "Tidak Ada": COLORS["gray"],
     }
-    fig = px.pie(
-        counts,
-        names="Result",
-        values="Jumlah",
-        hole=0.64,
-        color="Result",
-        color_discrete_map=color_map,
+
+    text_color_map = {
+        "Recommend": "#FFFFFF",
+        "Revise": "#0B1F3A",
+        "Sama": "#FFFFFF",
+    }
+
+    labels = counts["Result"].tolist()
+    values = counts["Jumlah"].tolist()
+    colors = [color_map.get(label, COLORS["blue"]) for label in labels]
+    text_colors = [text_color_map.get(label, "#FFFFFF") for label in labels]
+
+    fig = go.Figure(
+        data=[
+            go.Pie(
+                labels=labels,
+                values=values,
+                hole=0.50,
+                sort=False,
+                direction="clockwise",
+                rotation=90,
+                textinfo="label+percent",
+                textposition="inside",
+                insidetextorientation="radial",
+                textfont=dict(
+                    family="Inter, Arial, sans-serif",
+                    size=18,
+                    color=text_colors,
+                ),
+                marker=dict(
+                    colors=colors,
+                    line=dict(color="#EAF3FB", width=4),
+                ),
+                hovertemplate=(
+                    "<b>%{label}</b><br>"
+                    "Jumlah: %{value:,.0f} hotel<br>"
+                    "Persentase: %{percent}<extra></extra>"
+                ),
+                showlegend=False,
+            )
+        ]
     )
-    fig.update_traces(
-        sort=False,
-        textposition="inside",
-        textinfo="label+percent",
-        insidetextorientation="radial",
-        textfont=dict(color="#FFFFFF", size=12, family="Inter, Arial, sans-serif"),
-        marker=dict(line=dict(color="#FFFFFF", width=4)),
-        hovertemplate="%{label}<br>%{value:,.0f} hotel<br>%{percent}<extra></extra>",
+
+    fig.update_layout(
+        template="plotly_white",
+        height=430,
+        margin=dict(l=0, r=0, t=0, b=0),
+        paper_bgcolor="#EAF3FB",
+        plot_bgcolor="#EAF3FB",
+        font=dict(family="Inter, Arial, sans-serif", color="#0B1F3A", size=13),
+        uniformtext_minsize=13,
+        uniformtext_mode="show",
+        hoverlabel=dict(
+            bgcolor="#0B1F3A",
+            bordercolor="rgba(255,255,255,.5)",
+            font=dict(color="#FFFFFF", family="Inter, Arial, sans-serif", size=12),
+        ),
     )
-    fig.add_annotation(
-        text=f"<b>{len(data):,.0f}</b><br><span style='font-size:11px'>Hotel</span>".replace(",", "."),
-        x=0.5,
-        y=0.5,
-        showarrow=False,
-        font=dict(color="#0B1F3A", size=16),
-    )
-    fig.update_layout(margin=dict(l=18, r=18, t=10, b=10))
-    return apply_plot_theme(fig, height=345, show_legend=False)
+
+    return fig
 
 
 def gap_band_bar(data: pd.DataFrame, orientation: str = "h") -> go.Figure:
@@ -2950,26 +3015,141 @@ def horizontal_bar(
 
 
 def stacked_result_by_group(data: pd.DataFrame, group_col: str, top_n: int = 10) -> go.Figure:
-    if data.empty:
-        return apply_plot_theme(go.Figure(), height=380)
-    top_groups = aggregate_by(data, group_col).sort_values("Jumlah Hotel", ascending=False).head(top_n)[group_col]
-    subset = data[data[group_col].isin(top_groups)]
+    """Stacked bar Komposisi Result per Group.
+
+    Plotly Bar tidak punya properti `textinfo`; properti itu hanya untuk Pie/Donut.
+    Karena itu chart ini memakai `text`, `textposition`, dan `textfont` supaya aman
+    di Streamlit Cloud.
+    """
+
+    if data.empty or group_col not in data.columns or "Result" not in data.columns:
+        return apply_plot_theme(go.Figure(), height=460, show_legend=True)
+
+    result_order = ["Recommend", "Revise", "Sama"]
+    color_map = {
+        "Recommend": COLORS["green"],
+        "Revise": COLORS["yellow"],
+        "Sama": COLORS["blue"],
+    }
+
+    group_rank = (
+        data.groupby(group_col, dropna=False)
+        .size()
+        .reset_index(name="Total")
+        .sort_values("Total", ascending=False)
+        .head(top_n)
+    )
+
+    selected_groups = group_rank[group_col].astype(str).tolist()
+    subset = data[data[group_col].astype(str).isin(selected_groups)].copy()
+    subset["Result"] = subset["Result"].astype(str).str.strip()
+
     pivot = (
-        subset.groupby([group_col, "Result"]).size().reset_index(name="Jumlah")
+        subset.groupby([group_col, "Result"], dropna=False)
+        .size()
+        .reset_index(name="Jumlah")
     )
-    fig = px.bar(
-        pivot,
-        x="Jumlah",
-        y=group_col,
-        color="Result",
-        orientation="h",
+    pivot[group_col] = pivot[group_col].astype(str)
+    pivot = pivot[pivot["Result"].isin(result_order)]
+
+    full_index = pd.MultiIndex.from_product(
+        [selected_groups, result_order],
+        names=[group_col, "Result"],
+    )
+
+    pivot = (
+        pivot.set_index([group_col, "Result"])
+        .reindex(full_index, fill_value=0)
+        .reset_index()
+    )
+
+    total_per_group = pivot.groupby(group_col)["Jumlah"].sum().replace(0, np.nan)
+
+    pivot["Persen"] = pivot.apply(
+        lambda row: (row["Jumlah"] / total_per_group.loc[row[group_col]] * 100)
+        if pd.notna(total_per_group.loc[row[group_col]]) else 0,
+        axis=1,
+    )
+
+    pivot["_Group_Short"] = pivot[group_col].map(lambda x: shorten_label(str(x), 28))
+
+    fig = go.Figure()
+
+    for result in result_order:
+        part = pivot[pivot["Result"] == result].copy()
+        if part.empty:
+            continue
+
+        text_values = part.apply(
+            lambda row: f"{int(row['Jumlah'])}" if row["Jumlah"] >= 3 else "",
+            axis=1,
+        )
+
+        fig.add_trace(
+            go.Bar(
+                x=part["Jumlah"],
+                y=part["_Group_Short"],
+                orientation="h",
+                name=result,
+                marker=dict(
+                    color=color_map.get(result, COLORS["blue"]),
+                    line=dict(color="#FFFFFF", width=1.4),
+                ),
+                text=text_values,
+                textposition="inside",
+                insidetextanchor="middle",
+                textfont=dict(
+                    color="#0B1F3A" if result == "Revise" else "#FFFFFF",
+                    size=12,
+                    family="Inter, Arial, sans-serif",
+                ),
+                customdata=np.stack(
+                    [
+                        part[group_col].astype(str),
+                        part["Result"].astype(str),
+                        part["Jumlah"],
+                        part["Persen"],
+                    ],
+                    axis=-1,
+                ),
+                hovertemplate=(
+                    "<b>%{customdata[0]}</b><br>"
+                    "Result: %{customdata[1]}<br>"
+                    "Jumlah: %{customdata[2]:,.0f} hotel<br>"
+                    "Persentase: %{customdata[3]:.1f}%"
+                    "<extra></extra>"
+                ),
+                cliponaxis=False,
+            )
+        )
+
+    max_total = (
+        pivot.groupby("_Group_Short")["Jumlah"].sum().max()
+        if not pivot.empty else 1
+    )
+    chart_height = max(460, 56 * len(selected_groups) + 130)
+    category_order = list(reversed([shorten_label(str(x), 28) for x in selected_groups]))
+
+    fig.update_layout(
         barmode="stack",
-        color_discrete_map={"Recommend": COLORS["green"], "Revise": COLORS["yellow"], "Sama": COLORS["blue"]},
-        text="Jumlah",
+        height=chart_height,
+        margin=dict(l=210, r=120, t=25, b=85),
+        xaxis_title="Jumlah Hotel",
+        yaxis_title="",
+        legend_title_text="Result",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.24,
+            xanchor="center",
+            x=0.5,
+        ),
     )
-    fig.update_traces(textposition="inside", textinfo="percent+label", marker=dict(line=dict(color="white", width=2)))
-    fig.update_layout(title="Komposisi Result")
-    return apply_plot_theme(fig, height=420)
+
+    fig.update_xaxes(range=[0, max(1, max_total) * 1.18])
+    fig.update_yaxes(categoryorder="array", categoryarray=category_order)
+
+    return apply_plot_theme(fig, height=chart_height, show_legend=True)
 
 
 def scatter_price(data: pd.DataFrame) -> go.Figure:
