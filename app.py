@@ -1,12 +1,13 @@
 # =============================================================
 # Dashboard Corporate Rate Hotel Pertamina 2026
-# PURE GOOGLE SHEETS VERSION
+# Streamlit single-file application
+# Author: Generated for user request
 # =============================================================
 
 from __future__ import annotations
 
+import io
 import math
-import re
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
@@ -22,16 +23,15 @@ import streamlit as st
 
 APP_TITLE = "Dashboard Corporate Rate Hotel Pertamina 2026"
 APP_SUBTITLE = "Executive pricing intelligence untuk perpanjangan kontrak hotel"
-
-# Link Google Sheets yang kamu kirim.
-GOOGLE_SHEET_SHARE_URL = "https://docs.google.com/spreadsheets/d/1aydlmGDgVhGDFgxgLeciUDBvbgCA3Z-dBSOYu6pQ8aU/edit?usp=sharing"
-
-# ID dan GID dipakai untuk membaca data sebagai CSV oleh Streamlit.
+# Google Sheets data source.
+# Spreadsheet must be shared as: Anyone with the link -> Viewer.
 GOOGLE_SHEET_ID = "1aydlmGDgVhGDFgxgLeciUDBvbgCA3Z-dBSOYu6pQ8aU"
-GOOGLE_SHEET_GID = "0"
-GOOGLE_SHEET_URL = GOOGLE_SHEET_SHARE_URL
-GOOGLE_SHEET_CSV_URL = f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEET_ID}/export?format=csv&gid={GOOGLE_SHEET_GID}"
-DATA_REFRESH_TTL_SECONDS = 300
+GOOGLE_SHEET_GID = "0"  # Ganti jika data ada di tab lain; ambil angka setelah gid= pada URL tab.
+GOOGLE_SHEETS_CSV_URL = (
+    f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEET_ID}/export"
+    f"?format=csv&gid={GOOGLE_SHEET_GID}"
+)
+
 
 REQUIRED_COLUMNS = [
     "No",
@@ -53,17 +53,43 @@ COLORS = {
     "navy": "#002B5B",
     "navy_2": "#003E7E",
     "blue": "#0066B3",
+    "light_blue": "#EAF4FF",
     "red": "#E31E24",
+    "light_red": "#FFECEC",
     "green": "#008E5A",
     "green_2": "#00A859",
+    "light_green": "#EAFBF3",
     "yellow": "#FDB913",
     "orange": "#F59E0B",
+    "light_yellow": "#FFF7E0",
     "teal": "#007C7A",
+    "gray": "#65758B",
+    "light_gray": "#F5F7FA",
     "white": "#FFFFFF",
-    "ink": "#0B1F3A",
-    "muted": "#64748B",
-    "canvas": "#EAF3FB",
-    "soft": "#F8FBFF",
+    "black": "#0F172A",
+}
+
+COLORWAY = [
+    COLORS["navy"],
+    COLORS["green"],
+    COLORS["yellow"],
+    COLORS["blue"],
+    COLORS["red"],
+    COLORS["teal"],
+    "#8B5CF6",
+    "#64748B",
+]
+
+CONFIG = {
+    "displayModeBar": False,
+    "responsive": True,
+    "toImageButtonOptions": {
+        "format": "png",
+        "filename": "dashboard_corporate_rate_hotel_pertamina_2026",
+        "height": 900,
+        "width": 1600,
+        "scale": 2,
+    },
 }
 
 PAGE_OPTIONS = [
@@ -92,14 +118,45 @@ PAGE_ICONS = {
     "10 Executive Recommendations": "💡",
 }
 
-CHART_CONFIG = {
-    "displayModeBar": False,
-    "responsive": True,
+# Coordinate point for province-level map. City in the data behaves like province/region.
+PROVINCE_COORDS = {
+    "Aceh": (4.6951, 96.7494),
+    "Bali": (-8.4095, 115.1889),
+    "Banten": (-6.4058, 106.0640),
+    "Bengkulu": (-3.7928, 102.2608),
+    "DI Yogyakarta": (-7.8754, 110.4262),
+    "DKI Jakarta": (-6.2088, 106.8456),
+    "Gorontalo": (0.5435, 123.0568),
+    "Jambi": (-1.6101, 103.6131),
+    "Jawa Barat": (-6.9175, 107.6191),
+    "Jawa Tengah": (-7.1509, 110.1403),
+    "Jawa Timur": (-7.5361, 112.2384),
+    "Kalimantan Barat": (-0.2788, 111.4753),
+    "Kalimantan Selatan": (-3.0926, 115.2838),
+    "Kalimantan Tengah": (-1.6815, 113.3824),
+    "Kalimantan Timur": (0.5387, 116.4194),
+    "Kalimantan Utara": (3.0731, 116.0414),
+    "Kepulauan Bangka Belitung": (-2.7411, 106.4406),
+    "Kepulauan Riau": (3.9457, 108.1429),
+    "Lampung": (-4.5586, 105.4068),
+    "Maluku": (-3.2385, 130.1453),
+    "Nusa Tenggara Barat": (-8.6529, 117.3616),
+    "Nusa Tenggara Timur": (-8.6574, 121.0794),
+    "Papua": (-4.2699, 138.0804),
+    "Papua Barat": (-1.3361, 133.1747),
+    "Riau": (0.2933, 101.7068),
+    "Sulawesi Selatan": (-3.6688, 119.9741),
+    "Sulawesi Tengah": (-1.4300, 121.4456),
+    "Sulawesi Tenggara": (-4.1449, 122.1746),
+    "Sulawesi Utara": (1.4931, 124.8413),
+    "Sumatera Barat": (-0.7399, 100.8000),
+    "Sumatera Selatan": (-3.3194, 103.9144),
+    "Sumatera Utara": (2.1154, 99.5451),
 }
 
 
 # =============================================================
-# 2. STREAMLIT SETUP & CSS
+# 2. PAGE SETUP AND CSS
 # =============================================================
 
 st.set_page_config(
@@ -111,239 +168,394 @@ st.set_page_config(
 
 
 def inject_css() -> None:
+    """Inject polished Pertamina-style CSS with a dark blue gradient canvas and clean white cards."""
     st.markdown(
         f"""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
         :root {{
-            --navy: {COLORS['navy']};
-            --blue: {COLORS['blue']};
-            --green: {COLORS['green']};
-            --red: {COLORS['red']};
-            --yellow: {COLORS['yellow']};
-            --ink: {COLORS['ink']};
-            --muted: {COLORS['muted']};
-            --card-border: rgba(255,255,255,.22);
-            --glass: rgba(255,255,255,.08);
+            --pertamina-navy: {COLORS['navy']};
+            --pertamina-blue: {COLORS['blue']};
+            --pertamina-green: {COLORS['green_2']};
+            --pertamina-red: {COLORS['red']};
+            --pertamina-yellow: {COLORS['yellow']};
+            --ink: #0B1F3A;
+            --muted: #64748B;
+            --card: rgba(255,255,255,.96);
+            --card-border: rgba(226,232,240,.75);
         }}
 
         html, body, [class*="css"] {{
-            font-family: 'Inter', Arial, sans-serif !important;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }}
 
         .stApp {{
             background:
-                radial-gradient(circle at 15% 10%, rgba(0,102,179,.28), transparent 28%),
-                radial-gradient(circle at 88% 18%, rgba(0,142,90,.25), transparent 30%),
-                linear-gradient(135deg, #002B5B 0%, #004D7A 45%, #007C7A 100%) !important;
+                radial-gradient(circle at 8% 6%, rgba(0,168,89,.34) 0, transparent 25%),
+                radial-gradient(circle at 94% 9%, rgba(227,30,36,.22) 0, transparent 24%),
+                radial-gradient(circle at 70% 90%, rgba(0,102,179,.30) 0, transparent 30%),
+                linear-gradient(135deg, #00152F 0%, #003B73 42%, #005F73 78%, #007C59 100%);
+            color: var(--ink);
+        }}
+
+        .stApp::before {{
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background:
+                linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
+                linear-gradient(180deg, rgba(255,255,255,.025) 1px, transparent 1px);
+            background-size: 42px 42px;
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,.65), transparent 70%);
         }}
 
         .main .block-container {{
-            max-width: 1540px;
-            padding-top: 1.4rem;
-            padding-bottom: 4rem;
+            padding-top: 1.1rem;
+            padding-left: 1.55rem;
+            padding-right: 1.55rem;
+            padding-bottom: 2rem;
+            max-width: 1600px;
         }}
 
-        section[data-testid="stSidebar"] {{
-            background: linear-gradient(180deg, #002B5B 0%, #03234B 55%, #061A36 100%) !important;
-            border-right: 1px solid rgba(255,255,255,.13);
+        h1, h2, h3, h4, h5, h6, p, span, label {{
+            letter-spacing: -0.015em;
         }}
 
-        section[data-testid="stSidebar"] * {{
-            color: #FFFFFF !important;
-        }}
-
-        section[data-testid="stSidebar"] .stRadio label {{
-            padding: .42rem .62rem;
-            border-radius: 999px;
-            font-weight: 800;
-        }}
-
-        div[role="radiogroup"] label:has(input:checked) {{
-            background: linear-gradient(90deg, {COLORS['blue']}, {COLORS['green']}) !important;
-        }}
-
-        .brand-box {{
-            padding: 1.25rem 1rem 1.1rem 1rem;
-            border-radius: 24px;
-            background: rgba(255,255,255,.08);
-            border: 1px solid rgba(255,255,255,.16);
-            margin-bottom: 1rem;
-        }}
-
-        .brand-row {{
-            display: flex;
-            gap: .78rem;
-            align-items: center;
-        }}
-
-        .brand-logo {{
-            display:flex;
-            gap:.28rem;
-            align-items:flex-end;
-            height:46px;
-        }}
-        .brand-bar {{ width:14px; border-radius:8px 8px 4px 4px; }}
-        .brand-blue {{ background:{COLORS['blue']}; height:28px; }}
-        .brand-green {{ background:{COLORS['green_2']}; height:44px; }}
-        .brand-red {{ background:{COLORS['red']}; height:35px; }}
-
-        .brand-title {{
-            font-size: 1.08rem;
-            line-height: 1.08;
+        h1, h2, h3 {{
+            color: var(--ink);
             font-weight: 900;
-            color: #FFFFFF !important;
-            margin-bottom: .22rem;
-        }}
-        .brand-subtitle {{
-            font-size: .75rem;
-            font-weight: 700;
-            color: rgba(255,255,255,.72) !important;
         }}
 
-        .hero {{
-            padding: 1.4rem 1.45rem;
-            border-radius: 28px;
+        /* Sidebar */
+        section[data-testid="stSidebar"] {{
             background:
-                linear-gradient(135deg, rgba(0,43,91,.95), rgba(0,102,179,.88) 48%, rgba(0,142,90,.86)),
-                radial-gradient(circle at top right, rgba(253,185,19,.35), transparent 24%);
-            border: 1px solid rgba(255,255,255,.25);
-            box-shadow: 0 24px 70px rgba(0,0,0,.18);
-            margin-bottom: 1.15rem;
+                radial-gradient(circle at 20% 15%, rgba(0,168,89,.28), transparent 27%),
+                radial-gradient(circle at 90% 2%, rgba(227,30,36,.20), transparent 22%),
+                linear-gradient(180deg, #001C43 0%, #002B5B 55%, #001A3D 100%);
+            border-right: 1px solid rgba(255,255,255,.12);
+            box-shadow: 16px 0 45px rgba(0,0,0,.20);
         }}
-        .hero h1 {{
+        section[data-testid="stSidebar"] * {{
+            color: #EAF4FF !important;
+        }}
+        section[data-testid="stSidebar"] .stRadio label {{
+            background: transparent;
+            border-radius: 14px;
+            padding: 5px 8px;
+            transition: all .18s ease;
+        }}
+        section[data-testid="stSidebar"] .stRadio label:hover {{
+            background: rgba(255,255,255,.09);
+            transform: translateX(2px);
+        }}
+        section[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {{
+            background: linear-gradient(90deg, rgba(0,102,179,.95), rgba(0,168,89,.70));
+            box-shadow: 0 10px 22px rgba(0,0,0,.18);
+        }}
+        section[data-testid="stSidebar"] div[data-baseweb="select"] * {{
+            color: #0F172A !important;
+        }}
+
+        .logo-wrap {{
+            display:flex;
+            gap:13px;
+            align-items:center;
+            padding: 10px 2px 24px 2px;
+            border-bottom: 1px solid rgba(255,255,255,.16);
+            margin-bottom: 16px;
+        }}
+        .logo-bars {{
+            width:44px;
+            height:44px;
+            display:grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap:5px;
+            align-items:end;
+        }}
+        .logo-bars span {{
+            display:block;
+            border-radius: 9px 9px 5px 5px;
+            box-shadow: 0 12px 24px rgba(0,0,0,.26);
+        }}
+        .logo-bars span:nth-child(1) {{ height: 24px; background: var(--pertamina-blue); }}
+        .logo-bars span:nth-child(2) {{ height: 39px; background: var(--pertamina-green); }}
+        .logo-bars span:nth-child(3) {{ height: 31px; background: var(--pertamina-red); }}
+        .logo-text-title {{
+            font-weight: 900;
+            line-height: 1.08;
+            color: #FFFFFF !important;
+            font-size: 1.03rem;
+        }}
+        .logo-text-sub {{
+            font-weight: 650;
+            color: rgba(255,255,255,.78) !important;
+            font-size: .72rem;
+            margin-top: 4px;
+        }}
+
+        /* Header */
+        .page-title {{
+            background:
+                radial-gradient(circle at 84% 8%, rgba(253,185,19,.24), transparent 23%),
+                radial-gradient(circle at 7% 10%, rgba(0,168,89,.26), transparent 20%),
+                linear-gradient(95deg, rgba(0,27,68,.98) 0%, rgba(0,68,128,.95) 50%, rgba(0,124,89,.92) 100%);
+            border: 1px solid rgba(255,255,255,.22);
+            border-radius: 26px;
+            padding: 24px 28px;
+            margin: 0 0 18px 0;
+            box-shadow: 0 24px 60px rgba(0,0,0,.20);
+            position: relative;
+            overflow: hidden;
+        }}
+        .page-title::after {{
+            content:"";
+            position:absolute;
+            inset:0;
+            background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,.12) 45%, transparent 70%);
+            transform: translateX(-70%);
+        }}
+        .page-title h1 {{
             color: #FFFFFF !important;
             margin: 0;
-            font-size: clamp(1.75rem, 3.5vw, 3.15rem);
-            letter-spacing: -0.05em;
-            font-weight: 950;
-            line-height: 1.02;
+            font-weight: 900;
+            font-size: clamp(1.55rem, 2.2vw, 2.25rem);
+            line-height: 1.08;
+            position: relative;
+            z-index: 1;
         }}
-        .hero p {{
+        .page-title p {{
             color: rgba(255,255,255,.86) !important;
-            margin: .55rem 0 0 0;
-            font-size: 1rem;
-            font-weight: 600;
+            margin: 8px 0 0 0;
+            font-weight: 650;
+            font-size: .95rem;
+            position: relative;
+            z-index: 1;
         }}
 
-        .kpi-card {{
-            min-height: 122px;
-            padding: 1rem 1.05rem;
+        /* Filter card */
+        .filter-card {{
+            background: rgba(255,255,255,.90);
+            backdrop-filter: blur(18px);
+            border: 1px solid rgba(255,255,255,.45);
+            box-shadow: 0 18px 40px rgba(0,0,0,.16);
+            border-radius: 22px;
+            padding: 16px 18px;
+            margin-bottom: 18px;
+        }}
+        div[data-baseweb="select"] > div {{
+            border-radius: 13px !important;
+            border-color: rgba(0,43,91,.14) !important;
+            box-shadow: 0 6px 16px rgba(15,23,42,.05) !important;
+        }}
+
+        /* Streamlit border containers: make them look like dashboard cards */
+        div[data-testid="stVerticalBlockBorderWrapper"] {{
+            background: rgba(255,255,255,.96) !important;
+            border: 1px solid rgba(226,232,240,.78) !important;
+            border-radius: 24px !important;
+            box-shadow: 0 20px 48px rgba(0,0,0,.14) !important;
+            backdrop-filter: blur(16px);
+        }}
+
+        .section-card {{
+            background: rgba(255,255,255,.96);
+            border: 1px solid rgba(226,232,240,.78);
             border-radius: 24px;
-            background: linear-gradient(160deg, rgba(255,255,255,.96), rgba(235,245,255,.94));
-            border: 1px solid rgba(255,255,255,.75);
-            box-shadow: 0 18px 48px rgba(0,43,91,.16);
+            padding: 18px;
+            box-shadow: 0 20px 48px rgba(0,0,0,.14);
+            margin-bottom: 18px;
+        }}
+        .section-heading {{
+            color: var(--ink) !important;
+            font-weight: 900;
+            font-size: 1.04rem;
+            margin: 0 0 .65rem 0;
+            display:flex;
+            align-items:center;
+            gap:.62rem;
+        }}
+        .section-heading .dot {{
+            width: 12px;
+            height: 12px;
+            background: linear-gradient(135deg, var(--pertamina-red), var(--pertamina-green));
+            border-radius:50%;
+            display:inline-block;
+            box-shadow: 0 0 0 4px rgba(0,168,89,.10);
+        }}
+
+        /* KPI cards */
+        .kpi-card {{
+            background:
+                linear-gradient(180deg, rgba(255,255,255,.98), rgba(245,249,255,.96));
+            border: 1px solid rgba(255,255,255,.65);
+            border-radius: 23px;
+            padding: 17px 17px 15px 17px;
+            min-height: 132px;
+            box-shadow: 0 20px 45px rgba(0,0,0,.15);
             position: relative;
             overflow: hidden;
         }}
         .kpi-card::before {{
             content:"";
             position:absolute;
-            inset:0 auto 0 0;
-            width:8px;
-            background: linear-gradient(180deg, {COLORS['blue']}, {COLORS['green']});
+            left:0;
+            right:0;
+            top:0;
+            height:4px;
+            background: linear-gradient(90deg, var(--pertamina-blue), var(--pertamina-green), var(--pertamina-red));
         }}
+        .kpi-card::after {{
+            content:"";
+            position:absolute;
+            width:165px;
+            height:165px;
+            right:-96px;
+            top:-98px;
+            border-radius:50%;
+            background: rgba(0,102,179,.10);
+        }}
+        .kpi-card.kpi-green::after {{ background: rgba(0,168,89,.13); }}
+        .kpi-card.kpi-red::after {{ background: rgba(227,30,36,.12); }}
+        .kpi-card.kpi-yellow::after {{ background: rgba(253,185,19,.18); }}
+        .kpi-card.kpi-navy::after {{ background: rgba(0,43,91,.13); }}
         .kpi-icon {{
-            width: 34px;
-            height: 34px;
-            border-radius: 12px;
+            width: 46px;
+            height: 46px;
+            border-radius: 16px;
             display:flex;
             align-items:center;
             justify-content:center;
-            background: rgba(0,102,179,.11);
-            font-size: 1.15rem;
-            margin-bottom: .42rem;
+            background: linear-gradient(135deg, #001B44 0%, var(--pertamina-blue) 100%);
+            color: #fff !important;
+            font-size: 1.12rem;
+            font-weight: 900;
+            box-shadow: 0 12px 24px rgba(0,43,91,.20);
         }}
+        .kpi-green .kpi-icon {{ background: linear-gradient(135deg, #007C57, var(--pertamina-green)); }}
+        .kpi-red .kpi-icon {{ background: linear-gradient(135deg, #B91C1C, var(--pertamina-red)); }}
+        .kpi-yellow .kpi-icon {{ background: linear-gradient(135deg, #D97706, var(--pertamina-yellow)); }}
+        .kpi-navy .kpi-icon {{ background: linear-gradient(135deg, #001B44, var(--pertamina-blue)); }}
         .kpi-label {{
-            color: {COLORS['muted']} !important;
-            font-weight: 800;
             font-size: .72rem;
+            color: var(--muted) !important;
+            font-weight: 900;
             text-transform: uppercase;
             letter-spacing: .06em;
+            margin-top: 11px;
         }}
         .kpi-value {{
-            color: {COLORS['ink']} !important;
-            font-weight: 950;
-            font-size: clamp(1.25rem, 2.2vw, 2rem);
-            line-height: 1.02;
-            margin-top: .24rem;
+            color: var(--ink) !important;
+            font-size: clamp(1.22rem, 1.8vw, 1.72rem);
+            font-weight: 900;
+            line-height: 1.08;
+            margin-top: 4px;
+            white-space: nowrap;
         }}
         .kpi-note {{
-            color: {COLORS['muted']} !important;
-            font-weight: 700;
-            font-size: .78rem;
-            margin-top: .38rem;
-        }}
-
-        .chart-card {{
-            background: linear-gradient(145deg, rgba(0,43,91,.62), rgba(0,102,179,.36) 52%, rgba(0,142,90,.22));
-            border: 1px solid rgba(255,255,255,.20);
-            border-radius: 26px;
-            padding: 1rem 1rem 1.15rem 1rem;
-            box-shadow: 0 20px 50px rgba(0,0,0,.14);
-            margin-bottom: 1rem;
-            overflow: hidden;
-        }}
-
-        .chart-heading {{
-            display:flex;
-            align-items:center;
-            gap:.58rem;
-            margin: .05rem 0 .82rem 0;
-            color: #FFFFFF !important;
-            font-size: clamp(1rem, 1.6vw, 1.38rem);
-            font-weight: 950;
-            letter-spacing: -0.035em;
-            line-height:1.2;
-            text-shadow: 0 2px 12px rgba(0,0,0,.28);
-        }}
-        .chart-heading * {{ color: #FFFFFF !important; }}
-        .chart-heading .dot {{
-            flex: 0 0 auto;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: conic-gradient(from 45deg, {COLORS['green']}, {COLORS['yellow']}, {COLORS['red']}, {COLORS['blue']}, {COLORS['green']});
-            box-shadow: 0 0 0 9px rgba(0,142,90,.13);
-        }}
-        .chart-heading .icon {{
-            color:#FFFFFF !important;
-            filter: drop-shadow(0 2px 7px rgba(0,0,0,.25));
-        }}
-
-        .note-card {{
-            background: rgba(255,255,255,.94);
-            border: 1px solid rgba(255,255,255,.75);
-            border-radius: 22px;
-            padding: 1rem 1.1rem;
-            margin-bottom: 1rem;
-            color: {COLORS['ink']} !important;
-            box-shadow: 0 16px 40px rgba(0,43,91,.12);
-        }}
-        .note-card h3 {{
-            color:{COLORS['ink']} !important;
-            font-weight: 900;
-            margin:0 0 .45rem 0;
-        }}
-        .note-card p, .note-card li {{
-            color:{COLORS['ink']} !important;
+            color: var(--muted) !important;
+            font-size: .76rem;
             font-weight: 650;
+            margin-top: 7px;
         }}
 
-        .dataframe th {{
-            background: {COLORS['navy']} !important;
-            color: #FFFFFF !important;
-            font-weight: 900 !important;
+        .insight-card {{
+            border-radius: 22px;
+            padding: 18px;
+            background: linear-gradient(135deg, #FFFFFF 0%, #F4FAFF 100%);
+            border: 1px solid rgba(226,232,240,.85);
+            box-shadow: 0 18px 40px rgba(0,0,0,.12);
+            height: 100%;
         }}
-
-        div[data-testid="stAlert"] {{
-            border-radius: 18px;
-        }}
-        div[data-testid="stButton"] button {{
-            border-radius: 999px;
+        .insight-title {{
+            color: var(--ink) !important;
             font-weight: 900;
-            border: 1px solid rgba(255,255,255,.55);
+            font-size: .98rem;
+            margin-bottom: 6px;
+        }}
+        .insight-body {{
+            color: #475569 !important;
+            font-size: .9rem;
+            line-height: 1.5;
+        }}
+        .pill {{
+            display:inline-flex;
+            align-items:center;
+            gap: 6px;
+            border-radius: 999px;
+            padding: 5px 10px;
+            font-weight: 900;
+            font-size: .75rem;
+            border: 1px solid rgba(0,43,91,.08);
+            background: #EFF6FF;
+            color: var(--ink) !important;
+        }}
+        .pill-green {{ background: {COLORS['light_green']}; color: {COLORS['green']} !important; }}
+        .pill-red {{ background: {COLORS['light_red']}; color: {COLORS['red']} !important; }}
+        .pill-yellow {{ background: {COLORS['light_yellow']}; color: #B45309 !important; }}
+
+        .footer-band {{
+            background: linear-gradient(90deg, #001B44, #0066B3, #007C59);
+            color: white !important;
+            border-radius: 20px;
+            padding: 17px 18px;
+            font-weight: 800;
+            box-shadow: 0 18px 38px rgba(0,0,0,.18);
+            margin-top: 8px;
+        }}
+
+        div[data-testid="stMetricValue"] {{ color: #FFFFFF !important; }}
+        div[data-testid="stMetricLabel"] {{ color: rgba(255,255,255,.78) !important; }}
+        div[data-testid="stMetricDelta"] {{ color: #D1FAE5 !important; }}
+
+        .stCaption, div[data-testid="stCaptionContainer"] p {{
+            color: rgba(255,255,255,.82) !important;
+            font-weight: 600;
+        }}
+
+        .stDataFrame {{
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 10px 24px rgba(15,23,42,.08);
+        }}
+        .dataframe th {{
+            background-color: var(--pertamina-navy) !important;
+            color: white !important;
+        }}
+
+        div[data-testid="stDownloadButton"] button,
+        div[data-testid="stButton"] button {{
+            border-radius: 13px;
+            border: 1px solid rgba(0,43,91,.14);
+            background: linear-gradient(135deg, #001B44 0%, #0066B3 100%);
+            color: white !important;
+            font-weight: 800;
+        }}
+        div[data-testid="stDownloadButton"] button:hover,
+        div[data-testid="stButton"] button:hover {{
+            border-color: var(--pertamina-green);
+            box-shadow: 0 12px 24px rgba(0,102,179,.22);
+        }}
+
+        /* Plotly: force readable labels. This fixes white/washed-out chart text. */
+        .js-plotly-plot .plotly text {{
+            fill: #0B1F3A !important;
+            font-family: 'Inter', Arial, sans-serif !important;
+            font-weight: 650 !important;
+        }}
+        .js-plotly-plot .legendtext {{
+            fill: #0B1F3A !important;
+            font-size: 12px !important;
+        }}
+        .js-plotly-plot .gtitle {{
+            display: none !important;
+        }}
+
+        @media (max-width: 1100px) {{
+            .main .block-container {{ padding-left: .85rem; padding-right: .85rem; }}
+            .page-title {{ padding: 20px; }}
+            .kpi-card {{ min-height: 118px; }}
         }}
         </style>
         """,
@@ -352,181 +564,427 @@ def inject_css() -> None:
 
 
 # =============================================================
-# 3. DATA LOADING & CLEANING
+# 3. DATA LOADING AND PREPROCESSING
 # =============================================================
 
-@st.cache_data(ttl=DATA_REFRESH_TTL_SECONDS, show_spinner=False)
-def load_google_sheet(url: str) -> pd.DataFrame:
-    """Read public Google Sheets CSV export."""
-    return pd.read_csv(url, dtype=str, keep_default_na=False)
+
+@st.cache_data(ttl=300, show_spinner=False)
+def cached_read_google_sheets(csv_url: str) -> pd.DataFrame:
+    """Read dashboard data directly from Google Sheets CSV export."""
+    return pd.read_csv(csv_url)
 
 
-def normalize_text(value: object) -> str:
-    if value is None or pd.isna(value):
-        return ""
-    return str(value).replace("\u00a0", " ").strip()
+def clean_text_series(series: pd.Series) -> pd.Series:
+    """Clean object columns without accidentally converting missing values to literal 'nan'."""
+    return (
+        series.astype("string")
+        .str.replace("\u00a0", " ", regex=False)
+        .str.replace(r"\s+", " ", regex=True)
+        .str.strip()
+    )
 
 
-def parse_money(value: object) -> float:
-    """Convert currency-like strings to numeric values."""
-    if value is None or pd.isna(value):
-        return 0.0
-    text = str(value).strip()
-    if text == "":
-        return 0.0
-
-    text = text.replace("\u00a0", " ")
-    text = text.replace("Rp", "").replace("IDR", "")
-    text = text.replace(" ", "")
-    text = text.replace("−", "-")
-
-    is_negative = False
-    if text.startswith("(") and text.endswith(")"):
-        is_negative = True
-        text = text[1:-1]
-
-    text = re.sub(r"[^0-9,.-]", "", text)
-    if text.count(",") > 0 and text.count(".") > 0:
-        if text.rfind(",") > text.rfind("."):
-            text = text.replace(".", "").replace(",", ".")
-        else:
-            text = text.replace(",", "")
-    elif text.count(",") > 0:
-        parts = text.split(",")
-        if len(parts[-1]) in (1, 2):
-            text = text.replace(",", ".")
-        else:
-            text = text.replace(",", "")
-    elif text.count(".") > 0:
-        parts = text.split(".")
-        if len(parts[-1]) == 3 and len(parts) > 1:
-            text = text.replace(".", "")
-
-    try:
-        number = float(text)
-        return -number if is_negative else number
-    except Exception:
-        return 0.0
-
-
-def normalize_result(value: object, selisih: float = 0.0) -> str:
-    text = normalize_text(value).lower()
-    if "revise" in text or "revisi" in text:
-        return "Revise"
-    if "recommend" in text or "rekom" in text:
+def normalize_result(value: object) -> str:
+    text = str(value).replace("\u00a0", " ").strip().lower()
+    if text.startswith("recommend") or text.startswith("rekomend"):
         return "Recommend"
-    if "same" in text or "sama" in text or "equal" in text:
+    if text.startswith("revise") or text.startswith("revisi"):
+        return "Revise"
+    if text in {"same", "sama"}:
         return "Sama"
-    if text == "":
-        if selisih > 0:
-            return "Recommend"
-        if selisih < 0:
-            return "Revise"
-        return "Sama"
-    return text.title()
+    return text.title() if text and text != "nan" else "Tidak Ada"
 
 
-def prepare_data(raw: pd.DataFrame) -> pd.DataFrame:
-    df = raw.copy()
-    df.columns = [normalize_text(c) for c in df.columns]
+def normalize_action(value: object) -> str:
+    text = str(value).replace("\u00a0", " ").strip().lower()
+    if "sign" in text or "kontrak" in text:
+        return "Sign Kontrak"
+    if "review" in text or "revise" in text or "revisi" in text:
+        return "Review Rate"
+    if "maintain" in text or "done" in text or "selesai" in text:
+        return "Done"
+    return text.title() if text and text != "nan" else "Belum Ditentukan"
 
-    for col in REQUIRED_COLUMNS:
-        if col not in df.columns:
-            df[col] = ""
 
-    df = df[REQUIRED_COLUMNS].copy()
-    df = df.replace({"": np.nan})
-    df = df.dropna(how="all")
-    df = df.fillna("")
+def clean_dataframe(raw: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, object]]:
+    """Validate, clean, enrich and return dashboard-ready data."""
+    data = raw.copy()
+    data.columns = [str(c).replace("\u00a0", " ").strip() for c in data.columns]
 
-    for col in [
+    missing_cols = [col for col in REQUIRED_COLUMNS if col not in data.columns]
+    if missing_cols:
+        st.error("Kolom wajib tidak ditemukan: " + ", ".join(missing_cols))
+        st.stop()
+
+    data = data[REQUIRED_COLUMNS].copy()
+    data["Result Raw"] = data["Result"].astype("string")
+    data["Next Action Raw"] = data["Next Action"].astype("string")
+
+    # Clean regular text fields. Keep Result Raw and Next Action Raw untouched
+    # so Data Quality can detect whitespace/category issues from the original file.
+    text_cols = [
         "Group/ Non Group",
         "Nama Group/ Non Group",
         "City",
         "Nama Hotel",
         "Email",
-        "Result",
-        "Next Action",
         "Checking Remarks",
         "Status",
-    ]:
-        df[col] = df[col].map(normalize_text)
+    ]
+    for col in text_cols:
+        data[col] = clean_text_series(data[col])
 
-    df["Publish Rate Num"] = df["Publish Rate"].map(parse_money)
-    df["Offering Rate Num"] = df["Offering Corporate Rate 2026"].map(parse_money)
-    df["Nilai Selisih Num"] = df["Nilai Selisih"].map(parse_money)
+    for col in ["Publish Rate", "Offering Corporate Rate 2026", "Nilai Selisih"]:
+        data[col] = pd.to_numeric(data[col], errors="coerce").fillna(0)
 
-    missing_gap = df["Nilai Selisih Num"].eq(0) & df["Publish Rate Num"].ne(0) & df["Offering Rate Num"].ne(0)
-    df.loc[missing_gap, "Nilai Selisih Num"] = df.loc[missing_gap, "Publish Rate Num"] - df.loc[missing_gap, "Offering Rate Num"]
+    data["Result"] = data["Result Raw"].apply(normalize_result)
+    data["Next Action"] = data["Next Action Raw"].apply(normalize_action)
+    data["Group/ Non Group"] = data["Group/ Non Group"].fillna("Tidak Ada").replace("", "Tidak Ada")
+    data["Nama Group/ Non Group"] = data["Nama Group/ Non Group"].fillna("Tidak Ada").replace("", "Tidak Ada")
+    data["City"] = data["City"].fillna("Tidak Ada").replace("", "Tidak Ada")
+    data["Nama Hotel"] = data["Nama Hotel"].fillna("Tidak Ada").replace("", "Tidak Ada")
 
-    df["Result"] = [normalize_result(r, s) for r, s in zip(df["Result"], df["Nilai Selisih Num"])]
-    df["Group/ Non Group"] = df["Group/ Non Group"].replace("", "Tidak Terisi")
-    df["Nama Group/ Non Group"] = df["Nama Group/ Non Group"].replace("", "Tidak Terisi")
-    df["City"] = df["City"].replace("", "Tidak Terisi")
-    df["Nama Hotel"] = df["Nama Hotel"].replace("", "Tidak Terisi")
-    df["Next Action"] = df["Next Action"].replace("", "Belum Terisi")
-    df["Status"] = df["Status"].replace("", "Belum Terisi")
-    df["Checking Remarks"] = df["Checking Remarks"].replace("", "Belum Terisi")
+    email = data["Email"].fillna("").astype(str).str.strip()
+    remarks = data["Checking Remarks"].fillna("").astype(str).str.strip()
+    data["Email Missing"] = email.isin(["", "-", "nan", "None", "NaN"])
+    data["Remarks Missing"] = remarks.isin(["", "-", "nan", "None", "NaN"])
 
-    df["Has Email"] = df["Email"].str.contains("@", na=False)
-    df["Gap Abs"] = df["Nilai Selisih Num"].abs()
-    df["Gap Band"] = pd.cut(
-        df["Nilai Selisih Num"],
-        bins=[-np.inf, -1, 0, 1_000_000, 3_000_000, 5_000_000, np.inf],
-        labels=["Negatif", "Sama", "0-1M", "1-3M", "3-5M", ">5M"],
-        include_lowest=True,
-    ).astype(str)
+    data["Is Recommend"] = data["Result"].eq("Recommend")
+    data["Is Revise"] = data["Result"].eq("Revise")
+    data["Is Sign Kontrak"] = data["Next Action"].eq("Sign Kontrak")
+    data["Is Positive Gap"] = data["Nilai Selisih"] > 0
+    data["Is Negative Gap"] = data["Nilai Selisih"] < 0
+    data["Is Same Rate"] = data["Nilai Selisih"].eq(0)
 
-    return df.reset_index(drop=True)
+    data["Corporate Status"] = np.select(
+        [data["Nilai Selisih"] > 0, data["Nilai Selisih"] < 0, data["Nilai Selisih"].eq(0)],
+        ["Corporate Lebih Murah", "Corporate Lebih Mahal", "Sama dengan Publish"],
+        default="Tidak Ada",
+    )
+    data["Gap Band"] = np.select(
+        [
+            data["Nilai Selisih"] < 0,
+            data["Nilai Selisih"].eq(0),
+            (data["Nilai Selisih"] > 0) & (data["Nilai Selisih"] <= 100_000),
+            (data["Nilai Selisih"] > 100_000) & (data["Nilai Selisih"] <= 300_000),
+            (data["Nilai Selisih"] > 300_000) & (data["Nilai Selisih"] <= 500_000),
+            data["Nilai Selisih"] > 500_000,
+        ],
+        ["Negatif", "Sama", "0-100rb", "100-300rb", "300-500rb", ">500rb"],
+        default="Tidak Ada",
+    )
+    data["Discount vs Publish %"] = np.where(
+        data["Publish Rate"] > 0,
+        data["Nilai Selisih"] / data["Publish Rate"],
+        0,
+    )
+    data["Corporate Rate Ratio"] = np.where(
+        data["Publish Rate"] > 0,
+        data["Offering Corporate Rate 2026"] / data["Publish Rate"],
+        np.nan,
+    )
+    data["Priority"] = np.select(
+        [
+            data["Nilai Selisih"] < 0,
+            data["Is Revise"] & (data["Nilai Selisih"] >= 0) & (data["Nilai Selisih"] <= 100_000),
+            data["Is Sign Kontrak"],
+            data["Is Recommend"] & (data["Nilai Selisih"] > 500_000),
+            data["Is Recommend"],
+        ],
+        [
+            "P1 - Urgent Negative",
+            "P2 - Revise Positive",
+            "P3 - Sign Kontrak",
+            "Maintain High Opportunity",
+            "Maintain Rate",
+        ],
+        default="Review Manual",
+    )
+
+    # SLA is synthetic because the source file has no date. It is used only as a tracking indicator.
+    data["SLA Status"] = np.select(
+        [data["Priority"].eq("P1 - Urgent Negative"), data["Priority"].eq("P3 - Sign Kontrak")],
+        ["Critical", "On Track"],
+        default="Completed",
+    )
+
+    # Add coordinates for map page.
+    data["Latitude"] = data["City"].map(lambda x: PROVINCE_COORDS.get(str(x), (np.nan, np.nan))[0])
+    data["Longitude"] = data["City"].map(lambda x: PROVINCE_COORDS.get(str(x), (np.nan, np.nan))[1])
+
+    raw_result_counts = data["Result Raw"].value_counts(dropna=False).to_dict()
+    raw_result_string = data["Result Raw"].astype(str).str.replace("\u00a0", " ", regex=False)
+    result_whitespace_issue = int((raw_result_string != raw_result_string.str.strip()).sum())
+
+    metadata = {
+        "rows": len(data),
+        "columns": list(data.columns),
+        "raw_result_counts": raw_result_counts,
+        "result_whitespace_issue": result_whitespace_issue,
+        "missing_email": int(data["Email Missing"].sum()),
+        "missing_remarks": int(data["Remarks Missing"].sum()),
+    }
+    return data, metadata
 
 
 # =============================================================
-# 4. FORMATTERS & UI HELPERS
+# 4. FORMATTERS AND HELPERS
 # =============================================================
 
-def format_rp(value: float, compact: bool = True) -> str:
+
+def format_number(value: float, decimals: int = 0) -> str:
     if value is None or pd.isna(value):
-        value = 0
+        return "-"
+    return f"{value:,.{decimals}f}".replace(",", ".")
+
+
+def format_rupiah(value: float, compact: bool = True, decimals: int = 1) -> str:
+    if value is None or pd.isna(value):
+        return "Rp-"
     sign = "-" if value < 0 else ""
-    value = abs(float(value))
+    abs_value = abs(float(value))
     if compact:
-        if value >= 1_000_000_000:
-            return f"{sign}Rp{value / 1_000_000_000:.1f}B"
-        if value >= 1_000_000:
-            return f"{sign}Rp{value / 1_000_000:.1f}M"
-        if value >= 1_000:
-            return f"{sign}Rp{value / 1_000:.1f}K"
-    return f"{sign}Rp{value:,.0f}".replace(",", ".")
+        if abs_value >= 1_000_000_000:
+            return f"{sign}Rp{abs_value / 1_000_000_000:.{decimals}f}B"
+        if abs_value >= 1_000_000:
+            return f"{sign}Rp{abs_value / 1_000_000:.{decimals}f}M"
+        if abs_value >= 1_000:
+            return f"{sign}Rp{abs_value / 1_000:.{decimals}f}K"
+    return f"{sign}Rp{abs_value:,.0f}".replace(",", ".")
 
 
-def shorten_label(text: object, max_len: int = 30) -> str:
-    text = normalize_text(text)
-    if len(text) <= max_len:
-        return text
-    return text[: max_len - 1].rstrip() + "…"
+def format_pct(value: float, decimals: int = 1) -> str:
+    if value is None or pd.isna(value):
+        return "-"
+    return f"{value * 100:.{decimals}f}%"
 
 
-def kpi_card(label: str, value: str, note: str = "", icon: str = "📌") -> None:
+def safe_div(numerator: float, denominator: float) -> float:
+    return float(numerator) / float(denominator) if denominator else 0.0
+
+
+def option_list(series: pd.Series, label_all: str = "Semua") -> List[str]:
+    values = sorted([str(x) for x in series.dropna().unique() if str(x).strip()])
+    return [label_all] + values
+
+
+def selected_filter(data: pd.DataFrame, column: str, value: str) -> pd.DataFrame:
+    if value and value != "Semua":
+        return data[data[column].astype(str).eq(str(value))]
+    return data
+
+
+def selected_multi_filter(data: pd.DataFrame, column: str, values: List[str]) -> pd.DataFrame:
+    if values:
+        return data[data[column].astype(str).isin(values)]
+    return data
+
+
+def sort_table(data: pd.DataFrame, by: str, ascending: bool = False, n: Optional[int] = None) -> pd.DataFrame:
+    if data.empty or by not in data.columns:
+        return data.head(0)
+    out = data.sort_values(by=by, ascending=ascending)
+    return out.head(n) if n else out
+
+
+def aggregate_by(data: pd.DataFrame, group_col: str) -> pd.DataFrame:
+    if data.empty:
+        return pd.DataFrame(
+            columns=[
+                group_col,
+                "Jumlah Hotel",
+                "Total Selisih",
+                "Avg Selisih",
+                "Avg Publish Rate",
+                "Avg Corporate Rate",
+                "Recommend",
+                "Revise",
+                "Negative",
+                "Sign Kontrak",
+                "Missing Email",
+                "Missing Remarks",
+                "Revise Rate",
+                "Negative Rate",
+                "Avg Discount %",
+            ]
+        )
+
+    agg = (
+        data.groupby(group_col, dropna=False)
+        .agg(
+            **{
+                "Jumlah Hotel": ("Nama Hotel", "count"),
+                "Total Selisih": ("Nilai Selisih", "sum"),
+                "Avg Selisih": ("Nilai Selisih", "mean"),
+                "Avg Publish Rate": ("Publish Rate", "mean"),
+                "Avg Corporate Rate": ("Offering Corporate Rate 2026", "mean"),
+                "Recommend": ("Is Recommend", "sum"),
+                "Revise": ("Is Revise", "sum"),
+                "Negative": ("Is Negative Gap", "sum"),
+                "Sign Kontrak": ("Is Sign Kontrak", "sum"),
+                "Missing Email": ("Email Missing", "sum"),
+                "Missing Remarks": ("Remarks Missing", "sum"),
+            }
+        )
+        .reset_index()
+    )
+    agg["Revise Rate"] = agg.apply(lambda r: safe_div(r["Revise"], r["Jumlah Hotel"]), axis=1)
+    agg["Negative Rate"] = agg.apply(lambda r: safe_div(r["Negative"], r["Jumlah Hotel"]), axis=1)
+    agg["Avg Discount %"] = agg.apply(lambda r: safe_div(r["Avg Selisih"], r["Avg Publish Rate"]), axis=1)
+    return agg
+
+
+def kpi_summary(data: pd.DataFrame) -> Dict[str, float]:
+    total = len(data)
+    positive_gap = data.loc[data["Nilai Selisih"] > 0, "Nilai Selisih"].sum() if total else 0
+    negative_gap = data.loc[data["Nilai Selisih"] < 0, "Nilai Selisih"].sum() if total else 0
+    return {
+        "total": total,
+        "recommend": int(data["Is Recommend"].sum()) if total else 0,
+        "revise": int(data["Is Revise"].sum()) if total else 0,
+        "positive_count": int((data["Nilai Selisih"] > 0).sum()) if total else 0,
+        "negative_count": int((data["Nilai Selisih"] < 0).sum()) if total else 0,
+        "same_count": int((data["Nilai Selisih"] == 0).sum()) if total else 0,
+        "sign_kontrak": int(data["Is Sign Kontrak"].sum()) if total else 0,
+        "total_gap": float(data["Nilai Selisih"].sum()) if total else 0,
+        "positive_gap": float(positive_gap),
+        "negative_gap": float(negative_gap),
+        "avg_gap": float(data["Nilai Selisih"].mean()) if total else 0,
+        "avg_publish": float(data["Publish Rate"].mean()) if total else 0,
+        "avg_corporate": float(data["Offering Corporate Rate 2026"].mean()) if total else 0,
+        "missing_email": int(data["Email Missing"].sum()) if total else 0,
+        "missing_remarks": int(data["Remarks Missing"].sum()) if total else 0,
+        "group_count": int(data["Nama Group/ Non Group"].nunique()) if total else 0,
+        "city_count": int(data["City"].nunique()) if total else 0,
+    }
+
+
+def style_numeric_table(data: pd.DataFrame) -> pd.DataFrame:
+    """Return a display copy with readable money and percentage formats.
+
+    Important: columns such as Revise Rate and Negative Rate are percentages,
+    while Publish Rate and Corporate Rate are money columns.
+    """
+    out = data.copy()
+    money_cols = []
+    pct_cols = []
+    for c in out.columns:
+        cl = c.lower()
+        is_money = (
+            "selisih" in cl
+            or "publish rate" in cl
+            or "corporate rate" in cl
+            or "opportunity" in cl
+        )
+        is_pct = (
+            "%" in c
+            or "discount" in cl
+            or c in {"Revise Rate", "Negative Rate"}
+        )
+        if is_money:
+            money_cols.append(c)
+        elif is_pct:
+            pct_cols.append(c)
+
+    for col in money_cols:
+        if pd.api.types.is_numeric_dtype(out[col]):
+            out[col] = out[col].map(lambda x: format_rupiah(x, compact=False))
+    for col in pct_cols:
+        if col in out.columns and pd.api.types.is_numeric_dtype(out[col]):
+            out[col] = out[col].map(lambda x: format_pct(x))
+    return out
+
+
+def apply_plot_theme(fig: go.Figure, height: int = 360, show_legend: bool = True) -> go.Figure:
+    """Apply a clean, readable corporate chart theme.
+
+    The previous version used transparent plot backgrounds and narrow margins, which made
+    axis labels look washed out on light/gradient backgrounds. This version gives every
+    chart its own white canvas, darker text, safer margins, and better mobile behavior.
+    """
+    fig.update_layout(
+        template="plotly_white",
+        height=height,
+        autosize=True,
+        margin=dict(l=88, r=92, t=18, b=56),
+        font=dict(family="Inter, Arial, sans-serif", color="#0B1F3A", size=12),
+        title=None,
+        paper_bgcolor="rgba(255,255,255,0.98)",
+        plot_bgcolor="rgba(248,251,255,0.98)",
+        colorway=COLORWAY,
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.18,
+            xanchor="left",
+            x=0,
+            bgcolor="rgba(255,255,255,0)",
+            font=dict(color="#0B1F3A", size=11),
+        ),
+        showlegend=show_legend,
+        hoverlabel=dict(
+            bgcolor="#0B1F3A",
+            bordercolor="rgba(255,255,255,.45)",
+            font=dict(color="#FFFFFF", family="Inter, Arial, sans-serif", size=12),
+        ),
+        uniformtext_minsize=10,
+        uniformtext_mode="hide",
+    )
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="rgba(148,163,184,.25)",
+        zeroline=False,
+        linecolor="rgba(15,23,42,.18)",
+        tickfont=dict(color="#334155", size=11),
+        title_font=dict(color="#334155", size=12),
+        automargin=True,
+    )
+    fig.update_yaxes(
+        showgrid=False,
+        gridcolor="rgba(148,163,184,.18)",
+        zeroline=False,
+        linecolor="rgba(15,23,42,.18)",
+        tickfont=dict(color="#334155", size=11),
+        title_font=dict(color="#334155", size=12),
+        automargin=True,
+    )
+    return fig
+
+
+def kpi_card(label: str, value: str, note: str = "", icon: str = "📌", color: str = "navy") -> None:
     st.markdown(
         f"""
-        <div class="kpi-card">
-            <div class="kpi-icon">{icon}</div>
-            <div class="kpi-label">{label}</div>
-            <div class="kpi-value">{value}</div>
-            <div class="kpi-note">{note}</div>
+        <div class="kpi-card kpi-{color}">
+            <div class="kpi-top">
+                <div>
+                    <div class="kpi-icon">{icon}</div>
+                    <div class="kpi-label">{label}</div>
+                    <div class="kpi-value">{value}</div>
+                    <div class="kpi-note">{note}</div>
+                </div>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
 
-def section_title(title: str, subtitle: str = "") -> None:
-    sub = f"<p>{subtitle}</p>" if subtitle else ""
+def section_header(title: str, icon: str = "") -> None:
+    icon_text = f"{icon} " if icon else ""
+    st.markdown(
+        f"<div class='section-heading'><span class='dot'></span>{icon_text}{title}</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def insight_card(title: str, body: str, badge: str = "", badge_type: str = "") -> None:
+    badge_html = f"<div style='margin-bottom:10px'><span class='pill {badge_type}'>{badge}</span></div>" if badge else ""
     st.markdown(
         f"""
-        <div class="hero">
-            <h1>{title}</h1>
-            {sub}
+        <div class="insight-card">
+            {badge_html}
+            <div class="insight-title">{title}</div>
+            <div class="insight-body">{body}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -534,98 +992,111 @@ def section_title(title: str, subtitle: str = "") -> None:
 
 
 def chart_card(title: str, fig: go.Figure, icon: str = "") -> None:
-    icon_html = f"<span class='icon'>{icon}</span>" if icon else ""
-    st.markdown(
-        f"""
-        <div class="chart-card">
-            <div class="chart-heading"><span class="dot"></span>{icon_html}<span>{title}</span></div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+    """Render a chart inside a real Streamlit bordered container so the card is not broken."""
+    with st.container(border=True):
+        section_header(title, icon)
+        st.plotly_chart(fig, use_container_width=True, config=CONFIG)
+
+
+def dataframe_card(title: str, data: pd.DataFrame, icon: str = "📋", height: int = 330) -> None:
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    section_header(title, icon)
+    st.dataframe(data, use_container_width=True, hide_index=True, height=height)
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-def note_card(title: str, body: str) -> None:
-    st.markdown(
-        f"""
-        <div class="note-card">
-            <h3>{title}</h3>
-            <p>{body}</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+def empty_state(message: str = "Tidak ada data pada filter ini.") -> None:
+    st.info(message)
 
 
-def apply_plot_theme(fig: go.Figure, height: int = 420, show_legend: bool = True) -> go.Figure:
-    fig.update_layout(
-        template="plotly_white",
-        height=height,
-        margin=dict(l=110, r=95, t=28, b=70),
-        font=dict(family="Inter, Arial, sans-serif", color=COLORS["ink"], size=12),
-        paper_bgcolor="#F8FBFF",
-        plot_bgcolor="#F8FBFF",
-        colorway=[COLORS["navy"], COLORS["green"], COLORS["yellow"], COLORS["blue"], COLORS["red"], COLORS["teal"]],
-        showlegend=show_legend,
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=-0.23,
-            xanchor="center",
-            x=0.5,
-            bgcolor="rgba(255,255,255,0)",
-            font=dict(color=COLORS["ink"], size=12),
-        ),
-        hoverlabel=dict(
-            bgcolor="#FFFFFF",
-            bordercolor="#D7E0EA",
-            font=dict(color=COLORS["ink"], family="Inter, Arial, sans-serif", size=12),
-        ),
-    )
-    fig.update_xaxes(
-        gridcolor="rgba(100,116,139,.22)",
-        zerolinecolor="rgba(100,116,139,.25)",
-        linecolor="rgba(15,23,42,.20)",
-        tickfont=dict(color=COLORS["ink"], size=12),
-        title_font=dict(color=COLORS["ink"], size=13),
-    )
-    fig.update_yaxes(
-        gridcolor="rgba(100,116,139,.12)",
-        zerolinecolor="rgba(100,116,139,.25)",
-        linecolor="rgba(15,23,42,.20)",
-        tickfont=dict(color=COLORS["ink"], size=12),
-        title_font=dict(color=COLORS["ink"], size=13),
-    )
-    return fig
+def to_excel_bytes(data: pd.DataFrame) -> bytes:
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        data.to_excel(writer, index=False, sheet_name="Filtered Data")
+    return output.getvalue()
+
+
+
+
+def shorten_label(value: object, max_len: int = 24) -> str:
+    """Shorten long category labels for narrow chart columns without changing source data."""
+    text = str(value)
+    return text if len(text) <= max_len else text[: max_len - 1].rstrip() + "…"
+
+
+def safe_axis_max(values: pd.Series | np.ndarray, pad: float = 1.24) -> float:
+    """Return a padded positive axis maximum for value labels outside bars."""
+    if values is None or len(values) == 0:
+        return 1.0
+    max_value = float(np.nanmax(values)) if len(values) else 1.0
+    if not np.isfinite(max_value) or max_value <= 0:
+        return 1.0
+    return max_value * pad
 
 
 # =============================================================
-# 5. CHART FUNCTIONS
+# 5. CHART BUILDERS
 # =============================================================
+
 
 def result_donut(data: pd.DataFrame) -> go.Figure:
-    """Donut Komposisi Result: label inside slice like the requested sample."""
-    order = ["Recommend", "Revise"]
-    counts = data["Result"].value_counts().reindex(order, fill_value=0).reset_index()
+    """Donut Komposisi Result: besar, bersih, label langsung di dalam slice."""
+
+    order = ["Recommend", "Revise", "Sama"]
+    counts = (
+        data["Result"]
+        .astype(str)
+        .str.strip()
+        .value_counts()
+        .reindex(order, fill_value=0)
+        .reset_index()
+    )
     counts.columns = ["Result", "Jumlah"]
-    counts = counts[counts["Jumlah"] > 0]
+    counts = counts[counts["Jumlah"] > 0].copy()
 
     if counts.empty:
         fig = go.Figure()
-        fig.add_annotation(text="Tidak ada data", x=.5, y=.5, showarrow=False, font=dict(size=18, color=COLORS["ink"]))
-        fig.update_layout(height=420, paper_bgcolor=COLORS["canvas"], plot_bgcolor=COLORS["canvas"])
+        fig.update_layout(
+            template="plotly_white",
+            height=430,
+            margin=dict(l=0, r=0, t=0, b=0),
+            paper_bgcolor="#EAF3FB",
+            plot_bgcolor="#EAF3FB",
+            annotations=[
+                dict(
+                    text="Tidak ada data",
+                    x=0.5,
+                    y=0.5,
+                    showarrow=False,
+                    font=dict(color="#0B1F3A", size=15, family="Inter, Arial, sans-serif"),
+                )
+            ],
+        )
         return fig
 
-    color_map = {"Recommend": COLORS["green"], "Revise": COLORS["yellow"]}
-    text_colors = ["#FFFFFF" if x == "Recommend" else COLORS["ink"] for x in counts["Result"]]
+    color_map = {
+        "Recommend": COLORS["green"],
+        "Revise": COLORS["yellow"],
+        "Sama": COLORS["blue"],
+    }
+
+    text_color_map = {
+        "Recommend": "#FFFFFF",
+        "Revise": "#0B1F3A",
+        "Sama": "#FFFFFF",
+    }
+
+    labels = counts["Result"].tolist()
+    values = counts["Jumlah"].tolist()
+    colors = [color_map.get(label, COLORS["blue"]) for label in labels]
+    text_colors = [text_color_map.get(label, "#FFFFFF") for label in labels]
 
     fig = go.Figure(
         data=[
             go.Pie(
-                labels=counts["Result"],
-                values=counts["Jumlah"],
-                hole=0.52,
+                labels=labels,
+                values=values,
+                hole=0.50,
                 sort=False,
                 direction="clockwise",
                 rotation=90,
@@ -638,10 +1109,14 @@ def result_donut(data: pd.DataFrame) -> go.Figure:
                     color=text_colors,
                 ),
                 marker=dict(
-                    colors=[color_map.get(x, COLORS["blue"]) for x in counts["Result"]],
-                    line=dict(color=COLORS["canvas"], width=5),
+                    colors=colors,
+                    line=dict(color="#EAF3FB", width=4),
                 ),
-                hovertemplate="<b>%{label}</b><br>Jumlah: %{value:,.0f} hotel<br>Persentase: %{percent}<extra></extra>",
+                hovertemplate=(
+                    "<b>%{label}</b><br>"
+                    "Jumlah: %{value:,.0f} hotel<br>"
+                    "Persentase: %{percent}<extra></extra>"
+                ),
                 showlegend=False,
             )
         ]
@@ -649,532 +1124,1321 @@ def result_donut(data: pd.DataFrame) -> go.Figure:
 
     fig.update_layout(
         template="plotly_white",
-        height=460,
-        margin=dict(l=30, r=30, t=8, b=8),
-        paper_bgcolor=COLORS["canvas"],
-        plot_bgcolor=COLORS["canvas"],
-        font=dict(family="Inter, Arial, sans-serif", color=COLORS["ink"], size=13),
+        height=430,
+        margin=dict(l=0, r=0, t=0, b=0),
+        paper_bgcolor="#EAF3FB",
+        plot_bgcolor="#EAF3FB",
+        font=dict(family="Inter, Arial, sans-serif", color="#0B1F3A", size=13),
         uniformtext_minsize=13,
         uniformtext_mode="show",
         hoverlabel=dict(
-            bgcolor="#FFFFFF",
-            bordercolor="#D7E0EA",
-            font=dict(color=COLORS["ink"], family="Inter, Arial, sans-serif", size=12),
+            bgcolor="#0B1F3A",
+            bordercolor="rgba(255,255,255,.5)",
+            font=dict(color="#FFFFFF", family="Inter, Arial, sans-serif", size=12),
         ),
     )
+
     return fig
+
+
+def gap_band_bar(data: pd.DataFrame, orientation: str = "h") -> go.Figure:
+    order = ["Negatif", "Sama", "0-100rb", "100-300rb", "300-500rb", ">500rb"]
+    colors = [COLORS["red"], COLORS["gray"], COLORS["yellow"], COLORS["teal"], COLORS["blue"], COLORS["navy"]]
+    counts = data["Gap Band"].value_counts().reindex(order, fill_value=0).reset_index()
+    counts.columns = ["Band Selisih", "Jumlah Hotel"]
+    fig = px.bar(
+        counts,
+        y="Band Selisih" if orientation == "h" else "Jumlah Hotel",
+        x="Jumlah Hotel" if orientation == "h" else "Band Selisih",
+        orientation=orientation,
+        text="Jumlah Hotel",
+        color="Band Selisih",
+        color_discrete_map=dict(zip(order, colors)),
+    )
+    fig.update_traces(
+        textposition="outside",
+        textfont=dict(color="#0B1F3A", size=12, family="Inter, Arial, sans-serif"),
+        marker_line_color="rgba(255,255,255,.85)",
+        marker_line_width=1.2,
+        cliponaxis=False,
+        hovertemplate="%{y}<br>Jumlah: %{x:,.0f} hotel<extra></extra>" if orientation == "h" else "%{x}<br>Jumlah: %{y:,.0f} hotel<extra></extra>",
+    )
+    fig.update_layout(xaxis_title="Jumlah Hotel", yaxis_title="")
+    if orientation == "h":
+        fig.update_xaxes(range=[0, safe_axis_max(counts["Jumlah Hotel"], 1.22)])
+        fig.update_layout(margin=dict(l=118, r=76, t=18, b=44))
+    return apply_plot_theme(fig, height=350, show_legend=False)
 
 
 def horizontal_bar(
     data: pd.DataFrame,
-    group_col: str,
-    value_col: str = "Nilai Selisih Num",
-    top_n: int = 10,
+    x: str,
+    y: str,
+    title: str,
     color: str = COLORS["navy"],
-    value_format: str = "rp",
-    height: Optional[int] = None,
+    height: int = 360,
+    text_format: str = "money",
 ) -> go.Figure:
-    summary = (
-        data.groupby(group_col, dropna=False)[value_col]
-        .sum()
-        .reset_index()
-        .sort_values(value_col, ascending=False)
+    if data.empty:
+        return apply_plot_theme(go.Figure(), height=height, show_legend=False)
+
+    ordered = data.sort_values(x, ascending=True).copy()
+    ordered["_label_short"] = ordered[y].map(lambda v: shorten_label(v, 28))
+
+    if text_format == "money":
+        text = ordered[x].map(lambda v: format_rupiah(v, compact=True))
+    elif text_format == "pct":
+        text = ordered[x].map(lambda v: format_pct(v))
+    else:
+        text = ordered[x].map(lambda v: format_number(v))
+
+    fig = go.Figure(
+        go.Bar(
+            x=ordered[x],
+            y=ordered["_label_short"],
+            orientation="h",
+            marker=dict(
+                color=color,
+                line=dict(color="rgba(255,255,255,.88)", width=1.2),
+                cornerradius=7,
+            ),
+            text=text,
+            textposition="outside",
+            textfont=dict(color="#0B1F3A", size=12, family="Inter, Arial, sans-serif"),
+            customdata=np.stack([ordered[y].astype(str), ordered[x]], axis=-1),
+            hovertemplate="%{customdata[0]}<br>" + x + ": %{customdata[1]:,.0f}<extra></extra>",
+            cliponaxis=False,
+        )
+    )
+    fig.update_layout(xaxis_title="", yaxis_title="")
+    fig.update_xaxes(range=[0, safe_axis_max(ordered[x], 1.30)])
+    fig.update_layout(margin=dict(l=178, r=106, t=18, b=46))
+    return apply_plot_theme(fig, height=height, show_legend=False)
+
+
+def stacked_result_by_group(data: pd.DataFrame, group_col: str, top_n: int = 10) -> go.Figure:
+    """Stacked bar Komposisi Result per Group.
+
+    Plotly Bar tidak punya properti `textinfo`; properti itu hanya untuk Pie/Donut.
+    Karena itu chart ini memakai `text`, `textposition`, dan `textfont` supaya aman
+    di Streamlit Cloud.
+    """
+
+    if data.empty or group_col not in data.columns or "Result" not in data.columns:
+        return apply_plot_theme(go.Figure(), height=460, show_legend=True)
+
+    result_order = ["Recommend", "Revise", "Sama"]
+    color_map = {
+        "Recommend": COLORS["green"],
+        "Revise": COLORS["yellow"],
+        "Sama": COLORS["blue"],
+    }
+
+    group_rank = (
+        data.groupby(group_col, dropna=False)
+        .size()
+        .reset_index(name="Total")
+        .sort_values("Total", ascending=False)
         .head(top_n)
     )
-    summary["Label"] = summary[group_col].map(lambda x: shorten_label(x, 34))
-    summary["Text"] = summary[value_col].map(format_rp if value_format == "rp" else lambda x: f"{x:,.0f}")
 
-    fig = go.Figure()
-    fig.add_trace(
-        go.Bar(
-            x=summary[value_col],
-            y=summary["Label"],
-            orientation="h",
-            marker=dict(color=color, line=dict(color="rgba(255,255,255,.85)", width=1.2)),
-            text=summary["Text"],
-            textposition="outside",
-            textfont=dict(color=COLORS["ink"], size=13, family="Inter, Arial, sans-serif"),
-            customdata=np.stack([summary[group_col].astype(str), summary[value_col]], axis=-1) if not summary.empty else None,
-            hovertemplate="<b>%{customdata[0]}</b><br>Nilai: %{text}<extra></extra>",
-            cliponaxis=False,
-        )
-    )
+    selected_groups = group_rank[group_col].astype(str).tolist()
+    subset = data[data[group_col].astype(str).isin(selected_groups)].copy()
+    subset["Result"] = subset["Result"].astype(str).str.strip()
 
-    max_val = summary[value_col].max() if not summary.empty else 1
-    min_val = summary[value_col].min() if not summary.empty else 0
-    padding = max(abs(max_val), abs(min_val), 1) * 0.25
-    fig.update_xaxes(range=[min(0, min_val) - padding * .2, max(0, max_val) + padding])
-    fig.update_yaxes(autorange="reversed")
-    return apply_plot_theme(fig, height=height or max(390, 58 * len(summary) + 120), show_legend=False)
-
-
-def count_bar(data: pd.DataFrame, group_col: str, top_n: int = 10, color: str = COLORS["green"], height: Optional[int] = None) -> go.Figure:
-    summary = data[group_col].value_counts().head(top_n).reset_index()
-    summary.columns = [group_col, "Jumlah"]
-    summary["Label"] = summary[group_col].map(lambda x: shorten_label(x, 34))
-
-    fig = go.Figure()
-    fig.add_trace(
-        go.Bar(
-            x=summary["Jumlah"],
-            y=summary["Label"],
-            orientation="h",
-            marker=dict(color=color, line=dict(color="rgba(255,255,255,.85)", width=1.2)),
-            text=summary["Jumlah"],
-            textposition="outside",
-            textfont=dict(color=COLORS["ink"], size=13, family="Inter, Arial, sans-serif"),
-            customdata=summary[group_col],
-            hovertemplate="<b>%{customdata}</b><br>Jumlah: %{x:,.0f} hotel<extra></extra>",
-            cliponaxis=False,
-        )
-    )
-    fig.update_xaxes(range=[0, max(summary["Jumlah"].max() * 1.22, 1)])
-    fig.update_yaxes(autorange="reversed")
-    return apply_plot_theme(fig, height=height or max(390, 54 * len(summary) + 115), show_legend=False)
-
-
-def stacked_result_by_group(data: pd.DataFrame, group_col: str, top_n: int = 8) -> go.Figure:
-    top_groups = data[group_col].value_counts().head(top_n).index.tolist()
-    subset = data[data[group_col].isin(top_groups)].copy()
     pivot = (
         subset.groupby([group_col, "Result"], dropna=False)
         .size()
         .reset_index(name="Jumlah")
     )
-    result_order = ["Recommend", "Revise", "Sama"]
-    color_map = {"Recommend": COLORS["green"], "Revise": COLORS["yellow"], "Sama": COLORS["blue"]}
+    pivot[group_col] = pivot[group_col].astype(str)
+    pivot = pivot[pivot["Result"].isin(result_order)]
+
+    full_index = pd.MultiIndex.from_product(
+        [selected_groups, result_order],
+        names=[group_col, "Result"],
+    )
+
+    pivot = (
+        pivot.set_index([group_col, "Result"])
+        .reindex(full_index, fill_value=0)
+        .reset_index()
+    )
+
+    total_per_group = pivot.groupby(group_col)["Jumlah"].sum().replace(0, np.nan)
+
+    pivot["Persen"] = pivot.apply(
+        lambda row: (row["Jumlah"] / total_per_group.loc[row[group_col]] * 100)
+        if pd.notna(total_per_group.loc[row[group_col]]) else 0,
+        axis=1,
+    )
+
+    pivot["_Group_Short"] = pivot[group_col].map(lambda x: shorten_label(str(x), 28))
+
     fig = go.Figure()
 
     for result in result_order:
-        part = pivot[pivot["Result"] == result].set_index(group_col).reindex(top_groups, fill_value=0).reset_index()
-        labels = [shorten_label(x, 26) for x in part[group_col]]
+        part = pivot[pivot["Result"] == result].copy()
+        if part.empty:
+            continue
+
+        text_values = part.apply(
+            lambda row: f"{int(row['Jumlah'])}" if row["Jumlah"] >= 3 else "",
+            axis=1,
+        )
+
         fig.add_trace(
             go.Bar(
                 x=part["Jumlah"],
-                y=labels,
+                y=part["_Group_Short"],
                 orientation="h",
                 name=result,
-                marker=dict(color=color_map[result], line=dict(color="#FFFFFF", width=1)),
-                text=[str(int(x)) if x > 0 else "" for x in part["Jumlah"]],
+                marker=dict(
+                    color=color_map.get(result, COLORS["blue"]),
+                    line=dict(color="#FFFFFF", width=1.4),
+                ),
+                text=text_values,
                 textposition="inside",
-                textfont=dict(color=COLORS["ink"] if result == "Revise" else "#FFFFFF", size=12),
-                customdata=np.stack([part[group_col].astype(str), part["Jumlah"]], axis=-1),
-                hovertemplate="<b>%{customdata[0]}</b><br>Result: " + result + "<br>Jumlah: %{customdata[1]:,.0f}<extra></extra>",
+                insidetextanchor="middle",
+                textfont=dict(
+                    color="#0B1F3A" if result == "Revise" else "#FFFFFF",
+                    size=12,
+                    family="Inter, Arial, sans-serif",
+                ),
+                customdata=np.stack(
+                    [
+                        part[group_col].astype(str),
+                        part["Result"].astype(str),
+                        part["Jumlah"],
+                        part["Persen"],
+                    ],
+                    axis=-1,
+                ),
+                hovertemplate=(
+                    "<b>%{customdata[0]}</b><br>"
+                    "Result: %{customdata[1]}<br>"
+                    "Jumlah: %{customdata[2]:,.0f} hotel<br>"
+                    "Persentase: %{customdata[3]:.1f}%"
+                    "<extra></extra>"
+                ),
+                cliponaxis=False,
             )
         )
 
-    fig.update_layout(barmode="stack")
-    fig.update_yaxes(autorange="reversed")
-    return apply_plot_theme(fig, height=max(420, 58 * len(top_groups) + 130), show_legend=True)
-
-
-def result_by_group_type(data: pd.DataFrame) -> go.Figure:
-    summary = (
-        data.groupby(["Group/ Non Group", "Result"], dropna=False)
-        .size()
-        .reset_index(name="Jumlah")
+    max_total = (
+        pivot.groupby("_Group_Short")["Jumlah"].sum().max()
+        if not pivot.empty else 1
     )
-    color_map = {"Recommend": COLORS["green"], "Revise": COLORS["yellow"], "Sama": COLORS["blue"]}
-    fig = px.bar(
-        summary,
-        x="Jumlah",
-        y="Group/ Non Group",
-        color="Result",
-        orientation="h",
-        text="Jumlah",
-        color_discrete_map=color_map,
+    chart_height = max(460, 56 * len(selected_groups) + 130)
+    category_order = list(reversed([shorten_label(str(x), 28) for x in selected_groups]))
+
+    fig.update_layout(
+        barmode="stack",
+        height=chart_height,
+        margin=dict(l=210, r=120, t=25, b=85),
+        xaxis_title="Jumlah Hotel",
+        yaxis_title="",
+        legend_title_text="Result",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.24,
+            xanchor="center",
+            x=0.5,
+        ),
     )
-    fig.update_traces(textposition="inside", marker_line_color="#FFFFFF", marker_line_width=1)
-    fig.update_yaxes(autorange="reversed")
-    return apply_plot_theme(fig, height=420, show_legend=True)
+
+    fig.update_xaxes(range=[0, max(1, max_total) * 1.18])
+    fig.update_yaxes(categoryorder="array", categoryarray=category_order)
+
+    return apply_plot_theme(fig, height=chart_height, show_legend=True)
 
 
-def scatter_gap(data: pd.DataFrame) -> go.Figure:
+def scatter_price(data: pd.DataFrame) -> go.Figure:
+    if data.empty:
+        return apply_plot_theme(go.Figure(), height=420)
     fig = px.scatter(
         data,
-        x="Publish Rate Num",
-        y="Offering Rate Num",
-        size="Gap Abs",
-        color="Result",
-        color_discrete_map={"Recommend": COLORS["green"], "Revise": COLORS["red"], "Sama": COLORS["blue"]},
+        x="Publish Rate",
+        y="Offering Corporate Rate 2026",
+        color="Corporate Status",
+        size=np.clip(data["Nilai Selisih"].abs(), 10_000, None),
         hover_name="Nama Hotel",
-        hover_data={"City": True, "Nama Group/ Non Group": True, "Nilai Selisih Num": ":,.0f"},
+        hover_data={
+            "City": True,
+            "Nama Group/ Non Group": True,
+            "Nilai Selisih": ":,.0f",
+            "Publish Rate": ":,.0f",
+            "Offering Corporate Rate 2026": ":,.0f",
+            "Corporate Status": True,
+        },
+        color_discrete_map={
+            "Corporate Lebih Murah": COLORS["green"],
+            "Corporate Lebih Mahal": COLORS["red"],
+            "Sama dengan Publish": COLORS["yellow"],
+        },
     )
-    max_axis = max(data["Publish Rate Num"].max(), data["Offering Rate Num"].max(), 1)
+    min_val = min(data["Publish Rate"].min(), data["Offering Corporate Rate 2026"].min())
+    max_val = max(data["Publish Rate"].max(), data["Offering Corporate Rate 2026"].max())
     fig.add_trace(
         go.Scatter(
-            x=[0, max_axis],
-            y=[0, max_axis],
+            x=[min_val, max_val],
+            y=[min_val, max_val],
             mode="lines",
-            line=dict(color=COLORS["muted"], width=2, dash="dash"),
-            name="Publish = Offering",
+            name="Sama dengan Publish",
+            line=dict(color="rgba(0,43,91,.35)", dash="dash", width=2),
             hoverinfo="skip",
         )
     )
-    return apply_plot_theme(fig, height=520, show_legend=True)
-
-
-def gap_histogram(data: pd.DataFrame) -> go.Figure:
-    fig = px.histogram(
-        data,
-        x="Nilai Selisih Num",
-        nbins=30,
-        color="Result",
-        color_discrete_map={"Recommend": COLORS["green"], "Revise": COLORS["yellow"], "Sama": COLORS["blue"]},
+    fig.update_layout(
+        title="Publish Rate vs Corporate Rate 2026",
+        xaxis_title="Publish Rate (Rp)",
+        yaxis_title="Offering Corporate Rate 2026 (Rp)",
     )
-    fig.update_layout(bargap=.08)
-    return apply_plot_theme(fig, height=430, show_legend=True)
+    return apply_plot_theme(fig, height=455)
 
 
-def gap_band_bar(data: pd.DataFrame) -> go.Figure:
-    order = ["Negatif", "Sama", "0-1M", "1-3M", "3-5M", ">5M"]
-    summary = data["Gap Band"].value_counts().reindex(order, fill_value=0).reset_index()
-    summary.columns = ["Gap Band", "Jumlah"]
-    fig = px.bar(
-        summary,
-        x="Gap Band",
-        y="Jumlah",
-        text="Jumlah",
-        color="Gap Band",
-        color_discrete_map={"Negatif": COLORS["red"], "Sama": COLORS["blue"], "0-1M": COLORS["teal"], "1-3M": COLORS["green"], "3-5M": COLORS["yellow"], ">5M": COLORS["navy"]},
+def city_boxplot(data: pd.DataFrame, top_n: int = 8) -> go.Figure:
+    if data.empty:
+        return apply_plot_theme(go.Figure(), height=380)
+    top_city = data["City"].value_counts().head(top_n).index
+    subset = data[data["City"].isin(top_city)]
+    fig = px.box(
+        subset,
+        x="City",
+        y="Nilai Selisih",
+        points="outliers",
+        color="City",
+        color_discrete_sequence=COLORWAY,
     )
-    fig.update_traces(textposition="outside", marker_line_color="#FFFFFF", marker_line_width=1.2)
-    return apply_plot_theme(fig, height=430, show_legend=False)
+    fig.add_hline(y=0, line_dash="dash", line_color=COLORS["red"], opacity=.65)
+    fig.update_layout(title="Sebaran Nilai Selisih per Wilayah Utama", xaxis_title="", yaxis_title="Nilai Selisih (Rp)")
+    return apply_plot_theme(fig, height=395, show_legend=False)
 
 
-def missing_chart(data: pd.DataFrame) -> go.Figure:
-    checks = {
-        "Email": data["Email"].eq("").sum(),
-        "Next Action": data["Next Action"].eq("Belum Terisi").sum(),
-        "Checking Remarks": data["Checking Remarks"].eq("Belum Terisi").sum(),
-        "Status": data["Status"].eq("Belum Terisi").sum(),
-        "City": data["City"].eq("Tidak Terisi").sum(),
-    }
-    summary = pd.DataFrame({"Kolom": list(checks.keys()), "Missing": list(checks.values())}).sort_values("Missing", ascending=False)
-    fig = go.Figure()
-    fig.add_trace(
-        go.Bar(
-            x=summary["Missing"],
-            y=summary["Kolom"],
-            orientation="h",
-            marker=dict(color=COLORS["red"], line=dict(color="#FFFFFF", width=1.2)),
-            text=summary["Missing"],
+def waterfall_by_band(data: pd.DataFrame) -> go.Figure:
+    order = ["Negatif", "Sama", "0-100rb", "100-300rb", "300-500rb", ">500rb"]
+    band = data.groupby("Gap Band")["Nilai Selisih"].sum().reindex(order, fill_value=0).reset_index()
+    fig = go.Figure(
+        go.Waterfall(
+            name="Kontribusi",
+            orientation="v",
+            measure=["relative"] * len(band) + ["total"],
+            x=list(band["Gap Band"]) + ["Total"],
+            y=list(band["Nilai Selisih"]) + [band["Nilai Selisih"].sum()],
+            text=[format_rupiah(v, compact=True) for v in band["Nilai Selisih"]] + [format_rupiah(band["Nilai Selisih"].sum(), compact=True)],
             textposition="outside",
-            cliponaxis=False,
+            connector={"line": {"color": "rgba(100,116,139,.45)"}},
+            increasing={"marker": {"color": COLORS["green"]}},
+            decreasing={"marker": {"color": COLORS["red"]}},
+            totals={"marker": {"color": COLORS["navy"]}},
         )
     )
-    fig.update_xaxes(range=[0, max(summary["Missing"].max() * 1.25, 1)])
-    fig.update_yaxes(autorange="reversed")
-    return apply_plot_theme(fig, height=420, show_legend=False)
+    fig.update_layout(title="Kontribusi Nilai Selisih per Band Harga", yaxis_title="Nilai Selisih (Rp)")
+    return apply_plot_theme(fig, height=380, show_legend=False)
+
+
+def province_map(data: pd.DataFrame) -> go.Figure:
+    regional = aggregate_by(data, "City")
+    regional["Latitude"] = regional["City"].map(lambda x: PROVINCE_COORDS.get(str(x), (np.nan, np.nan))[0])
+    regional["Longitude"] = regional["City"].map(lambda x: PROVINCE_COORDS.get(str(x), (np.nan, np.nan))[1])
+    regional = regional.dropna(subset=["Latitude", "Longitude"])
+
+    if regional.empty:
+        return apply_plot_theme(go.Figure(), height=495)
+
+    regional["Status"] = np.where(regional["Total Selisih"] >= 0, "Positif", "Negatif")
+    fig = px.scatter_mapbox(
+        regional,
+        lat="Latitude",
+        lon="Longitude",
+        size="Jumlah Hotel",
+        color="Total Selisih",
+        hover_name="City",
+        hover_data={
+            "Jumlah Hotel": True,
+            "Total Selisih": ":,.0f",
+            "Avg Selisih": ":,.0f",
+            "Recommend": True,
+            "Revise": True,
+            "Latitude": False,
+            "Longitude": False,
+        },
+        color_continuous_scale=[[0, COLORS["red"]], [.35, COLORS["yellow"]], [1, COLORS["green"]]],
+        size_max=46,
+        zoom=3.25,
+        center={"lat": -2.1, "lon": 118.1},
+        mapbox_style="open-street-map",
+    )
+    fig.update_layout(title="Peta Total Nilai Selisih per Wilayah", coloraxis_colorbar=dict(title="Selisih"))
+    return apply_plot_theme(fig, height=505)
+
+
+def group_bubble(data: pd.DataFrame) -> go.Figure:
+    group = aggregate_by(data, "Nama Group/ Non Group")
+    if group.empty:
+        return apply_plot_theme(go.Figure(), height=395)
+    group = group[group["Jumlah Hotel"] > 0]
+    fig = px.scatter(
+        group,
+        x="Revise",
+        y="Total Selisih",
+        size="Jumlah Hotel",
+        color="Avg Selisih",
+        hover_name="Nama Group/ Non Group",
+        hover_data={
+            "Jumlah Hotel": True,
+            "Recommend": True,
+            "Revise": True,
+            "Total Selisih": ":,.0f",
+            "Avg Selisih": ":,.0f",
+        },
+        color_continuous_scale=[[0, COLORS["red"]], [.45, COLORS["yellow"]], [1, COLORS["green"]]],
+        size_max=50,
+    )
+    fig.add_hline(y=0, line_dash="dash", line_color=COLORS["red"], opacity=.5)
+    fig.update_layout(title="Posisi Group: Total Selisih vs Revise", xaxis_title="Jumlah Revise", yaxis_title="Total Selisih (Rp)")
+    return apply_plot_theme(fig, height=395)
+
+
+def action_stacked_bar(data: pd.DataFrame) -> go.Figure:
+    pivot = data.groupby(["Next Action", "Result"]).size().reset_index(name="Jumlah")
+    fig = px.bar(
+        pivot,
+        x="Next Action",
+        y="Jumlah",
+        color="Result",
+        barmode="stack",
+        text="Jumlah",
+        color_discrete_map={"Recommend": COLORS["green"], "Revise": COLORS["yellow"], "Sama": COLORS["blue"]},
+    )
+    fig.update_layout(title="Action berdasarkan Result", xaxis_title="Next Action", yaxis_title="Jumlah Hotel")
+    return apply_plot_theme(fig, height=360)
+
+
+def impact_effort_chart(data: pd.DataFrame) -> go.Figure:
+    summary = kpi_summary(data)
+    actions = pd.DataFrame(
+        [
+            {
+                "Action": "Maintain Top Hotel",
+                "Impact": 5,
+                "Effort": 1.4,
+                "Kategori": "Quick Win",
+                "Nilai": summary["positive_gap"],
+                "Catatan": "Pertahankan rate hotel yang sudah memberi selisih positif.",
+            },
+            {
+                "Action": "Negotiate Negative Rates",
+                "Impact": 5,
+                "Effort": 3.8,
+                "Kategori": "Prioritas Utama",
+                "Nilai": abs(summary["negative_gap"]),
+                "Catatan": "Fokus pada hotel dengan corporate rate lebih mahal.",
+            },
+            {
+                "Action": "Review High-Volume Groups",
+                "Impact": 4,
+                "Effort": 2.7,
+                "Kategori": "Nilai Potensial",
+                "Nilai": summary["total_gap"],
+                "Catatan": "Optimalkan group yang volume hotelnya besar.",
+            },
+            {
+                "Action": "Complete Missing Email",
+                "Impact": 3,
+                "Effort": 1.6,
+                "Kategori": "Fondasi Data",
+                "Nilai": summary["missing_email"],
+                "Catatan": "Percepat follow-up kontrak dengan data kontak lengkap.",
+            },
+            {
+                "Action": "Finalize Contracts",
+                "Impact": 4,
+                "Effort": 3.2,
+                "Kategori": "Penutupan 2026",
+                "Nilai": summary["sign_kontrak"],
+                "Catatan": "Selesaikan hotel yang masih masuk Sign Kontrak.",
+            },
+        ]
+    )
+    fig = px.scatter(
+        actions,
+        x="Effort",
+        y="Impact",
+        size=np.clip(actions["Nilai"].abs(), 1, None),
+        color="Kategori",
+        text="Action",
+        hover_data={"Catatan": True, "Nilai": True},
+        color_discrete_sequence=[COLORS["green"], COLORS["red"], COLORS["yellow"], COLORS["blue"], COLORS["navy"]],
+        size_max=48,
+    )
+    fig.update_traces(textposition="top center")
+    fig.add_shape(type="line", x0=2.5, x1=2.5, y0=.5, y1=5.5, line=dict(color="rgba(100,116,139,.35)", dash="dash"))
+    fig.add_shape(type="line", x0=.5, x1=5.5, y0=3.0, y1=3.0, line=dict(color="rgba(100,116,139,.35)", dash="dash"))
+    fig.update_layout(
+        title="Impact vs Effort Matrix",
+        xaxis=dict(title="Usaha / Effort", range=[0.5, 5.5]),
+        yaxis=dict(title="Dampak / Impact", range=[0.5, 5.5]),
+    )
+    return apply_plot_theme(fig, height=430)
 
 
 # =============================================================
-# 6. FILTERS
+# 6. LAYOUT COMPONENTS
 # =============================================================
 
-def sidebar_brand() -> None:
+
+def sidebar_nav() -> str:
     st.sidebar.markdown(
-        f"""
-        <div class="brand-box">
-            <div class="brand-row">
-                <div class="brand-logo">
-                    <div class="brand-bar brand-blue"></div>
-                    <div class="brand-bar brand-green"></div>
-                    <div class="brand-bar brand-red"></div>
-                </div>
-                <div>
-                    <div class="brand-title">Corporate Rate<br>Hotel Pertamina 2026</div>
-                    <div class="brand-subtitle">Live Google Sheets Dashboard</div>
-                </div>
+        """
+        <div class="logo-wrap">
+            <div class="logo-bars"><span></span><span></span><span></span></div>
+            <div>
+                <div class="logo-text-title">Corporate Rate<br/>Hotel Pertamina 2026</div>
+                <div class="logo-text-sub">Pricing Intelligence Dashboard</div>
             </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    page = st.sidebar.radio(
+        "Navigasi Dashboard",
+        PAGE_OPTIONS,
+        format_func=lambda x: f"{PAGE_ICONS.get(x, '')}  {x}",
+        label_visibility="collapsed",
+    )
+    st.sidebar.markdown("---")
+    return page
+
+
+def page_title(page: str, subtitle: str = APP_SUBTITLE) -> None:
+    st.markdown(
+        f"""
+        <div class="page-title">
+            <h1>{APP_TITLE}</h1>
+            <p>{PAGE_ICONS.get(page, '📊')} {page} · {subtitle}</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
 
-def apply_filters(data: pd.DataFrame) -> pd.DataFrame:
-    st.sidebar.markdown("### 🎛️ Filter Dashboard")
-    cities = sorted(data["City"].dropna().unique().tolist())
-    results = sorted(data["Result"].dropna().unique().tolist())
-    group_types = sorted(data["Group/ Non Group"].dropna().unique().tolist())
+def data_source_selector() -> pd.DataFrame:
+    """Load dataset directly from Google Sheets; no Excel file or embedded data needed."""
+    st.sidebar.markdown("---")
+    st.sidebar.caption("☁️ Dataset aktif: Google Sheets")
 
-    selected_city = st.sidebar.multiselect("City", cities, default=[])
-    selected_result = st.sidebar.multiselect("Result", results, default=[])
-    selected_group_type = st.sidebar.multiselect("Group / Non Group", group_types, default=[])
-    keyword = st.sidebar.text_input("Cari nama hotel / group")
+    try:
+        return cached_read_google_sheets(GOOGLE_SHEETS_CSV_URL)
+    except Exception as exc:
+        st.error(
+            "Data Google Sheets gagal dibaca. Pastikan spreadsheet sudah di-share "
+            "dengan akses 'Anyone with the link' sebagai Viewer, dan pastikan tab data memakai GID yang benar."
+        )
+        st.info(f"URL CSV yang dibaca aplikasi: {GOOGLE_SHEETS_CSV_URL}")
+        st.exception(exc)
+        st.stop()
+
+
+def global_filters(data: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, str]]:
+    st.markdown("<div class='filter-card'>", unsafe_allow_html=True)
+    c1, c2, c3, c4, c5, c6 = st.columns([1, 1, 1.2, 1, 1, 1])
+    with c1:
+        tahun = st.selectbox("Tahun", ["2026"], index=0)
+    with c2:
+        city = st.selectbox("City", option_list(data["City"]), index=0)
+    with c3:
+        group = st.selectbox("Group", option_list(data["Nama Group/ Non Group"]), index=0)
+    with c4:
+        result = st.selectbox("Result", option_list(data["Result"]), index=0)
+    with c5:
+        action = st.selectbox("Next Action", option_list(data["Next Action"]), index=0)
+    with c6:
+        band = st.selectbox("Band Nilai", option_list(data["Gap Band"]), index=0)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     filtered = data.copy()
-    if selected_city:
-        filtered = filtered[filtered["City"].isin(selected_city)]
-    if selected_result:
-        filtered = filtered[filtered["Result"].isin(selected_result)]
-    if selected_group_type:
-        filtered = filtered[filtered["Group/ Non Group"].isin(selected_group_type)]
-    if keyword.strip():
-        key = keyword.strip().lower()
-        filtered = filtered[
-            filtered["Nama Hotel"].str.lower().str.contains(key, na=False)
-            | filtered["Nama Group/ Non Group"].str.lower().str.contains(key, na=False)
-            | filtered["City"].str.lower().str.contains(key, na=False)
+    for col, val in [
+        ("City", city),
+        ("Nama Group/ Non Group", group),
+        ("Result", result),
+        ("Next Action", action),
+        ("Gap Band", band),
+    ]:
+        filtered = selected_filter(filtered, col, val)
+
+    context = {
+        "tahun": tahun,
+        "city": city,
+        "group": group,
+        "result": result,
+        "action": action,
+        "band": band,
+    }
+    return filtered, context
+
+
+def sidebar_downloads(data: pd.DataFrame) -> None:
+    st.sidebar.markdown("### ⬇️ Export")
+    csv = data.to_csv(index=False).encode("utf-8-sig")
+    st.sidebar.download_button(
+        "Download CSV Filtered",
+        data=csv,
+        file_name="filtered_corporate_rate_hotel_pertamina_2026.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
+    st.sidebar.download_button(
+        "Download Excel Filtered",
+        data=to_excel_bytes(data),
+        file_name="filtered_corporate_rate_hotel_pertamina_2026.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True,
+    )
+
+
+def overview_kpi_row(data: pd.DataFrame) -> None:
+    s = kpi_summary(data)
+    cols = st.columns(6)
+    with cols[0]:
+        kpi_card("Total Hotel", f"{s['total']:,}".replace(",", "."), "jumlah record aktif", "🏨", "navy")
+    with cols[1]:
+        kpi_card("Recommend", f"{s['recommend']:,}".replace(",", "."), format_pct(safe_div(s["recommend"], s["total"])), "✅", "green")
+    with cols[2]:
+        kpi_card("Revise", f"{s['revise']:,}".replace(",", "."), format_pct(safe_div(s["revise"], s["total"])), "✏️", "yellow")
+    with cols[3]:
+        kpi_card("Total Nilai Selisih", format_rupiah(s["total_gap"]), "net opportunity", "Rp", "navy")
+    with cols[4]:
+        kpi_card("Rata-rata Selisih", format_rupiah(s["avg_gap"]), "per hotel", "📈", "green")
+    with cols[5]:
+        kpi_card("Selisih Negatif", f"{s['negative_count']:,}".replace(",", "."), "urgent revise", "⬇️", "red")
+
+
+# =============================================================
+# 7. DASHBOARD PAGES
+# =============================================================
+
+
+def page_executive_overview(data: pd.DataFrame, metadata: Dict[str, object]) -> None:
+    overview_kpi_row(data)
+    st.caption(
+        "Catatan cleaning: kategori Result sudah dinormalisasi dari spasi/karakter tersembunyi. "
+        f"Terdeteksi {metadata.get('result_whitespace_issue', 0)} record Result dengan whitespace tambahan."
+    )
+
+    if data.empty:
+        empty_state()
+        return
+
+    # Two-by-two chart layout so labels do not collide on laptop screens.
+    row1_left, row1_right = st.columns([0.92, 1.38])
+    with row1_left:
+        chart_card("Komposisi Result", result_donut(data), "🍩")
+    with row1_right:
+        city_top = aggregate_by(data, "City").sort_values("Total Selisih", ascending=False).head(5)
+        chart_card(
+            "Top 5 City berdasarkan Total Selisih",
+            horizontal_bar(city_top, "Total Selisih", "City", "", COLORS["navy"], 345),
+            "📍",
+        )
+
+    row2_left, row2_right = st.columns([1.38, 0.92])
+    with row2_left:
+        group_top = aggregate_by(data, "Nama Group/ Non Group").sort_values("Total Selisih", ascending=False).head(5)
+        chart_card(
+            "Top 5 Group berdasarkan Total Selisih",
+            horizontal_bar(group_top, "Total Selisih", "Nama Group/ Non Group", "", COLORS["green"], 345),
+            "👥",
+        )
+    with row2_right:
+        chart_card("Distribusi Nilai Selisih", gap_band_bar(data), "📊")
+
+    left2, right2 = st.columns([1.35, .95])
+    with left2:
+        top_table = data.sort_values("Nilai Selisih", ascending=False).head(12)[
+            [
+                "Nama Hotel",
+                "City",
+                "Nama Group/ Non Group",
+                "Publish Rate",
+                "Offering Corporate Rate 2026",
+                "Nilai Selisih",
+                "Result",
+                "Next Action",
+            ]
         ]
+        dataframe_card("Snapshot Hotel dengan Selisih Tertinggi", style_numeric_table(top_table), "🏨", 410)
+    with right2:
+        top_city = aggregate_by(data, "City").sort_values("Total Selisih", ascending=False).head(3)
+        top_city_names = ", ".join(top_city["City"].tolist()) if not top_city.empty else "-"
+        insight_card(
+            "Area kontribusi terbesar",
+            f"Wilayah dengan kontribusi selisih terbesar pada filter ini adalah <b>{top_city_names}</b>. Gunakan halaman Regional Analysis untuk melihat prioritas per provinsi.",
+            "Regional Focus",
+            "pill-green",
+        )
 
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 🔄 Data Source")
-    st.sidebar.markdown(f"[Buka Google Sheets]({GOOGLE_SHEET_URL})")
-    if st.sidebar.button("Refresh data sekarang"):
-        st.cache_data.clear()
-        st.rerun()
-
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 📌 Quick Stats")
-    st.sidebar.write(f"Hotel aktif: **{len(filtered):,.0f}**")
-    st.sidebar.write(f"Kota/region: **{filtered['City'].nunique():,.0f}**")
-    st.sidebar.write(f"Group: **{filtered['Nama Group/ Non Group'].nunique():,.0f}**")
-    return filtered
+    st.markdown("<div class='footer-band'>🎯 Arah utama: pertahankan rate yang memberikan selisih positif dan prioritaskan negosiasi hotel dengan selisih negatif.</div>", unsafe_allow_html=True)
 
 
-# =============================================================
-# 7. PAGES
-# =============================================================
+def page_regional_analysis(data: pd.DataFrame) -> None:
+    s = kpi_summary(data)
+    regional = aggregate_by(data, "City")
+    top_reg = regional.sort_values("Total Selisih", ascending=False).head(1)
+    top_rev = regional.sort_values("Revise", ascending=False).head(1)
+    second = regional.sort_values("Total Selisih", ascending=False).head(2).tail(1)
 
-def page_executive(data: pd.DataFrame) -> None:
-    section_title("Executive Overview", "Ringkasan performa corporate rate hotel berdasarkan data live Google Sheets.")
-    total = len(data)
-    recommend = int((data["Result"] == "Recommend").sum())
-    revise = int((data["Result"] == "Revise").sum())
-    total_gap = data["Nilai Selisih Num"].sum()
-    avg_gap = data["Nilai Selisih Num"].mean() if total else 0
-    complete_email = data["Has Email"].mean() * 100 if total else 0
+    cols = st.columns(5)
+    with cols[0]:
+        kpi_card("Total Selisih Nasional", format_rupiah(s["total_gap"]), "berdasarkan filter", "Rp", "navy")
+    with cols[1]:
+        kpi_card("Provinsi Tertinggi", top_reg["City"].iloc[0] if not top_reg.empty else "-", format_rupiah(top_reg["Total Selisih"].iloc[0]) if not top_reg.empty else "-", "🏆", "green")
+    with cols[2]:
+        kpi_card("Provinsi #2", second["City"].iloc[0] if not second.empty else "-", format_rupiah(second["Total Selisih"].iloc[0]) if not second.empty else "-", "🌴", "green")
+    with cols[3]:
+        kpi_card("Rata-rata Selisih", format_rupiah(s["avg_gap"]), "per hotel", "📈", "navy")
+    with cols[4]:
+        kpi_card("Revise Tertinggi", top_rev["City"].iloc[0] if not top_rev.empty else "-", f"{int(top_rev['Revise'].iloc[0])} hotel" if not top_rev.empty else "-", "✏️", "yellow")
 
-    c1, c2, c3, c4, c5 = st.columns(5)
-    with c1: kpi_card("Total Hotel", f"{total:,.0f}", "baris data aktif", "🏨")
-    with c2: kpi_card("Recommend", f"{recommend:,.0f}", f"{recommend / max(total,1):.1%} dari data", "✅")
-    with c3: kpi_card("Revise", f"{revise:,.0f}", f"{revise / max(total,1):.1%} dari data", "🟡")
-    with c4: kpi_card("Total Selisih", format_rp(total_gap), "akumulasi peluang", "💰")
-    with c5: kpi_card("Email Valid", f"{complete_email:.1f}%", "kontak terisi", "✉️")
+    if data.empty:
+        empty_state()
+        return
 
-    left, right = st.columns([1, 1.45])
+    left, right = st.columns([1.35, .9])
     with left:
-        chart_card("Komposisi Result", result_donut(data), "🎯")
+        chart_card("Peta Total Nilai Selisih per Wilayah", province_map(data), "🗺️")
     with right:
-        chart_card("Top 5 City berdasarkan Total Selisih", horizontal_bar(data, "City", top_n=5, height=460), "📍")
+        top10 = regional.sort_values("Total Selisih", ascending=False).head(10)
+        chart_card("Top 10 Provinsi berdasarkan Total Selisih", horizontal_bar(top10, "Total Selisih", "City", "", COLORS["navy"], 505), "🏁")
 
-    c1, c2 = st.columns(2)
-    with c1:
-        chart_card("Top 5 Group berdasarkan Total Selisih", horizontal_bar(data, "Nama Group/ Non Group", top_n=5, color=COLORS["green"], height=440), "👥")
-    with c2:
-        chart_card("Komposisi Group vs Non Group", result_by_group_type(data), "🏷️")
-
-
-def page_regional(data: pd.DataFrame) -> None:
-    section_title("Regional Analysis", "Analisis distribusi hotel dan peluang nilai selisih per city/region.")
-    c1, c2, c3 = st.columns(3)
-    with c1: kpi_card("Jumlah City", f"{data['City'].nunique():,.0f}", "cakupan region", "🌏")
-    with c2: kpi_card("City Terbesar", data["City"].value_counts().index[0] if len(data) else "-", "berdasarkan jumlah hotel", "📍")
-    with c3: kpi_card("Avg Selisih", format_rp(data["Nilai Selisih Num"].mean()), "rata-rata per hotel", "📊")
-
-    c1, c2 = st.columns(2)
-    with c1:
-        chart_card("Top 10 City berdasarkan Jumlah Hotel", count_bar(data, "City", top_n=10, color=COLORS["blue"]), "🏨")
-    with c2:
-        chart_card("Top 10 City berdasarkan Total Selisih", horizontal_bar(data, "City", top_n=10, color=COLORS["navy"]), "💰")
-
-    summary = data.groupby("City", dropna=False).agg(
-        Jumlah_Hotel=("Nama Hotel", "count"),
-        Recommend=("Result", lambda s: (s == "Recommend").sum()),
-        Revise=("Result", lambda s: (s == "Revise").sum()),
-        Total_Selisih=("Nilai Selisih Num", "sum"),
-        Avg_Selisih=("Nilai Selisih Num", "mean"),
-    ).reset_index().sort_values("Total_Selisih", ascending=False)
-    st.dataframe(summary, use_container_width=True, hide_index=True)
+    left2, right2 = st.columns([1.35, .95])
+    with left2:
+        display = regional.sort_values("Total Selisih", ascending=False).head(15)[
+            ["City", "Jumlah Hotel", "Total Selisih", "Avg Selisih", "Recommend", "Revise", "Revise Rate"]
+        ]
+        dataframe_card("Kinerja Wilayah", style_numeric_table(display), "📋", 420)
+    with right2:
+        rev = regional.sort_values("Revise", ascending=False).head(7)
+        chart_card("Provinsi dengan Revise Terbanyak", horizontal_bar(rev, "Revise", "City", "", COLORS["yellow"], 330, text_format="number"), "✏️")
+        top_city = regional.sort_values("Jumlah Hotel", ascending=False).head(1)
+        insight_card(
+            "Fokus regional",
+            f"<b>{top_city['City'].iloc[0] if not top_city.empty else '-'}</b> memiliki volume hotel tertinggi pada filter ini. Area dengan volume tinggi cocok menjadi target optimasi rate dan validasi kontrak.",
+            "Volume Focus",
+            "pill-green",
+        )
 
 
-def page_group(data: pd.DataFrame) -> None:
-    section_title("Group Performance", "Perbandingan performa group hotel, non group, dan portofolio brand.")
-    c1, c2 = st.columns(2)
-    with c1:
-        chart_card("Top 10 Group berdasarkan Jumlah Hotel", count_bar(data, "Nama Group/ Non Group", top_n=10, color=COLORS["blue"]), "👥")
-    with c2:
-        chart_card("Top 10 Group berdasarkan Total Selisih", horizontal_bar(data, "Nama Group/ Non Group", top_n=10, color=COLORS["green"]), "💰")
+def page_group_performance(data: pd.DataFrame) -> None:
+    group = aggregate_by(data, "Nama Group/ Non Group")
+    s = kpi_summary(data)
+    top_group = group.sort_values("Total Selisih", ascending=False).head(1)
+    top_volume = group.sort_values("Jumlah Hotel", ascending=False).head(1)
+    top_avg = group[group["Jumlah Hotel"] >= 2].sort_values("Avg Selisih", ascending=False).head(1)
+    top_revise = group.sort_values("Revise", ascending=False).head(1)
+    group_type_counts = data["Group/ Non Group"].value_counts()
 
-    chart_card("Komposisi Result per Group", stacked_result_by_group(data, "Nama Group/ Non Group", top_n=10), "📊")
+    cols = st.columns(6)
+    with cols[0]:
+        kpi_card("Total Group", f"{s['group_count']}+", "unique group/non-group", "👥", "navy")
+    with cols[1]:
+        kpi_card("Group Tertinggi", top_group["Nama Group/ Non Group"].iloc[0] if not top_group.empty else "-", format_rupiah(top_group["Total Selisih"].iloc[0]) if not top_group.empty else "-", "🏆", "green")
+    with cols[2]:
+        kpi_card("Group Volume Tertinggi", top_volume["Nama Group/ Non Group"].iloc[0] if not top_volume.empty else "-", f"{int(top_volume['Jumlah Hotel'].iloc[0])} hotel" if not top_volume.empty else "-", "🏨", "yellow")
+    with cols[3]:
+        kpi_card("Avg Selisih Tertinggi", top_avg["Nama Group/ Non Group"].iloc[0] if not top_avg.empty else "-", format_rupiah(top_avg["Avg Selisih"].iloc[0]) if not top_avg.empty else "-", "📈", "green")
+    with cols[4]:
+        kpi_card("Revise Tertinggi", top_revise["Nama Group/ Non Group"].iloc[0] if not top_revise.empty else "-", f"{int(top_revise['Revise'].iloc[0])} hotel" if not top_revise.empty else "-", "⚠️", "red")
+    with cols[5]:
+        g = int(group_type_counts.get("Group", 0))
+        ng = int(group_type_counts.get("Non Group", 0))
+        kpi_card("Group vs Non Group", f"{g} vs {ng}", format_pct(safe_div(g, g + ng)), "◔", "navy")
+
+    if data.empty:
+        empty_state()
+        return
+
+    left, mid, right = st.columns([1, 1, 1])
+    with left:
+        top = group.sort_values("Total Selisih", ascending=False).head(10)
+        chart_card("Top Group berdasarkan Total Selisih", horizontal_bar(top, "Total Selisih", "Nama Group/ Non Group", "", COLORS["navy"], 390), "👥")
+    with mid:
+        chart_card("Posisi Group: Total Selisih vs Revise", group_bubble(data), "🫧")
+    with right:
+        chart_card("Komposisi Result per Group", stacked_result_by_group(data, "Nama Group/ Non Group", top_n=8), "📊")
+
+    left2, right2 = st.columns([1.45, .85])
+    with left2:
+        table = group.sort_values("Total Selisih", ascending=False).head(20)[
+            ["Nama Group/ Non Group", "Jumlah Hotel", "Total Selisih", "Avg Selisih", "Recommend", "Revise", "Revise Rate"]
+        ]
+        dataframe_card("Scorecard Group", style_numeric_table(table), "📋", 430)
+    with right2:
+        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+        section_header("Benchmark", "🏅")
+        if not top_group.empty:
+            insight_card("Paling kuat dari sisi total selisih", f"<b>{top_group['Nama Group/ Non Group'].iloc[0]}</b> berkontribusi {format_rupiah(top_group['Total Selisih'].iloc[0])}.", "Total Selisih", "pill-green")
+        if not top_volume.empty:
+            insight_card("Paling kuat dari sisi volume", f"<b>{top_volume['Nama Group/ Non Group'].iloc[0]}</b> memiliki {int(top_volume['Jumlah Hotel'].iloc[0])} hotel.", "Volume", "pill-yellow")
+        if not top_revise.empty:
+            insight_card("Perlu perhatian revisi", f"<b>{top_revise['Nama Group/ Non Group'].iloc[0]}</b> punya {int(top_revise['Revise'].iloc[0])} hotel revise.", "Revise", "pill-red")
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
-def page_opportunity(data: pd.DataFrame) -> None:
-    section_title("Top Opportunity Hotels", "Hotel dengan nilai selisih tertinggi sebagai prioritas negosiasi dan follow-up.")
-    positive = data[data["Nilai Selisih Num"] > 0].copy().sort_values("Nilai Selisih Num", ascending=False)
-    negative = data[data["Nilai Selisih Num"] < 0].copy().sort_values("Nilai Selisih Num", ascending=True)
+def page_top_opportunity(data: pd.DataFrame) -> None:
+    if data.empty:
+        overview_kpi_row(data)
+        empty_state()
+        return
+    top_positive = data[data["Nilai Selisih"] > 0].sort_values("Nilai Selisih", ascending=False)
+    top_negative = data[data["Nilai Selisih"] < 0].sort_values("Nilai Selisih", ascending=True)
+    top10_total = top_positive.head(10)["Nilai Selisih"].sum()
 
-    c1, c2 = st.columns(2)
-    with c1:
-        chart_card("Top 10 Hotel dengan Nilai Selisih Tertinggi", horizontal_bar(positive, "Nama Hotel", top_n=10, color=COLORS["navy"]), "⭐")
-    with c2:
-        chart_card("Top 10 Hotel dengan Selisih Negatif", horizontal_bar(negative, "Nama Hotel", top_n=10, color=COLORS["red"]), "⚠️")
+    cols = st.columns(5)
+    with cols[0]:
+        kpi_card("Hotel Selisih Tertinggi", top_positive["Nama Hotel"].iloc[0] if not top_positive.empty else "-", format_rupiah(top_positive["Nilai Selisih"].iloc[0]) if not top_positive.empty else "-", "🏆", "green")
+    with cols[1]:
+        kpi_card("Top 10 Hotel Total", format_rupiah(top10_total), "nilai selisih positif", "📊", "navy")
+    with cols[2]:
+        kpi_card("Hotel Selisih Negatif", f"{len(top_negative)}", "butuh negosiasi", "⬇️", "red")
+    with cols[3]:
+        kpi_card("Selisih Terendah", top_negative["Nama Hotel"].iloc[0] if not top_negative.empty else "-", format_rupiah(top_negative["Nilai Selisih"].iloc[0]) if not top_negative.empty else "-", "〽️", "yellow")
+    with cols[4]:
+        kpi_card("Rata-rata Top 10", format_rupiah(safe_div(top10_total, min(10, len(top_positive)))), "hotel unggulan", "📈", "green")
 
-    display = positive[["City", "Nama Group/ Non Group", "Nama Hotel", "Publish Rate", "Offering Corporate Rate 2026", "Nilai Selisih Num", "Result", "Next Action"]].head(25).copy()
-    display["Nilai Selisih"] = display["Nilai Selisih Num"].map(lambda x: format_rp(x, compact=False))
-    display = display.drop(columns=["Nilai Selisih Num"])
-    st.dataframe(display, use_container_width=True, hide_index=True)
+    left, right = st.columns([1, 1])
+    with left:
+        top10 = top_positive.head(10).copy()
+        chart_card("Top 10 Hotel dengan Nilai Selisih Tertinggi", horizontal_bar(top10, "Nilai Selisih", "Nama Hotel", "", COLORS["navy"], 430), "⭐")
+    with right:
+        neg10 = top_negative.head(10).copy()
+        chart_card("Top 10 Hotel dengan Selisih Negatif", horizontal_bar(neg10, "Nilai Selisih", "Nama Hotel", "", COLORS["red"], 430), "⚠️")
+
+    left2, right2 = st.columns([1.45, .75])
+    with left2:
+        table = pd.concat([top_positive.head(15), top_negative.head(8)], axis=0).drop_duplicates("Nama Hotel")
+        table = table[
+            [
+                "Nama Hotel",
+                "City",
+                "Nama Group/ Non Group",
+                "Publish Rate",
+                "Offering Corporate Rate 2026",
+                "Nilai Selisih",
+                "Result",
+                "Next Action",
+            ]
+        ]
+        dataframe_card("Hotel Opportunity List", style_numeric_table(table), "🏨", 510)
+    with right2:
+        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+        section_header("Highlight Hotel", "🌟")
+        for idx, row in top_positive.head(3).iterrows():
+            insight_card(
+                row["Nama Hotel"],
+                f"{row['City']} · {row['Nama Group/ Non Group']}<br><b>{format_rupiah(row['Nilai Selisih'])}</b>",
+                "Opportunity",
+                "pill-green",
+            )
+        if not top_negative.empty:
+            row = top_negative.iloc[0]
+            insight_card(
+                row["Nama Hotel"],
+                f"{row['City']} · {row['Nama Group/ Non Group']}<br><b>{format_rupiah(row['Nilai Selisih'])}</b>",
+                "Revise Highest",
+                "pill-red",
+            )
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def page_price_gap(data: pd.DataFrame) -> None:
-    section_title("Price Gap Analytics", "Analisis pola publish rate, corporate offering, dan distribusi nilai selisih.")
-    c1, c2 = st.columns(2)
-    with c1:
-        chart_card("Distribusi Nilai Selisih", gap_histogram(data), "📊")
-    with c2:
-        chart_card("Band Nilai Selisih", gap_band_bar(data), "🏷️")
-    chart_card("Publish Rate vs Offering Corporate Rate", scatter_gap(data), "🔎")
+    s = kpi_summary(data)
+    avg_discount = safe_div(s["avg_gap"], s["avg_publish"])
+    cols = st.columns(6)
+    with cols[0]:
+        kpi_card("Corporate Lebih Murah", f"{s['positive_count']}", format_pct(safe_div(s["positive_count"], s["total"])), "⬇️", "green")
+    with cols[1]:
+        kpi_card("Corporate Lebih Mahal", f"{s['negative_count']}", format_pct(safe_div(s["negative_count"], s["total"])), "⬆️", "red")
+    with cols[2]:
+        kpi_card("Sama dengan Publish", f"{s['same_count']}", format_pct(safe_div(s["same_count"], s["total"])), "=", "yellow")
+    with cols[3]:
+        kpi_card("Avg Publish Rate", format_rupiah(s["avg_publish"]), "rata-rata", "Rp", "navy")
+    with cols[4]:
+        kpi_card("Avg Corporate Rate", format_rupiah(s["avg_corporate"]), "rata-rata", "💼", "green")
+    with cols[5]:
+        kpi_card("Avg Diskon vs Publish", format_pct(avg_discount), "positif = hemat", "%", "yellow")
+
+    if data.empty:
+        empty_state()
+        return
+
+    left, right = st.columns([1.35, .85])
+    with left:
+        chart_card("Publish Rate vs Corporate Rate 2026", scatter_price(data), "📉")
+    with right:
+        chart_card("Kategori Nilai Selisih", gap_band_bar(data, orientation="v"), "🏷️")
+
+    left2, right2 = st.columns([1, 1])
+    with left2:
+        chart_card("Kontribusi Nilai Selisih per Band Harga", waterfall_by_band(data), "🌊")
+    with right2:
+        chart_card("Sebaran Nilai Selisih per Wilayah Utama", city_boxplot(data), "📦")
+
+    status = data.groupby("Corporate Status").agg(**{"Jumlah Hotel": ("Nama Hotel", "count"), "Total Selisih": ("Nilai Selisih", "sum")}).reset_index()
+    left3, right3 = st.columns([.7, 1.3])
+    with left3:
+        dataframe_card("Status Harga 2026", style_numeric_table(status), "📋", 260)
+    with right3:
+        insight_card(
+            "Interpretasi cepat",
+            "Sebagian besar hotel yang corporate rate-nya lebih murah adalah sumber opportunity. Hotel dengan corporate rate lebih mahal harus dinegosiasikan agar tidak menggerus total nilai selisih portofolio.",
+            "Price Gap Insight",
+            "pill-green",
+        )
 
 
-def page_revise(data: pd.DataFrame) -> None:
-    section_title("Revise Priority", "Daftar prioritas hotel yang membutuhkan revisi atau tindak lanjut harga.")
-    revise = data[data["Result"] == "Revise"].copy()
-    c1, c2, c3 = st.columns(3)
-    with c1: kpi_card("Total Revise", f"{len(revise):,.0f}", "perlu follow-up", "🎯")
-    with c2: kpi_card("Revise City", f"{revise['City'].nunique():,.0f}", "region terdampak", "📍")
-    with c3: kpi_card("Avg Gap Revise", format_rp(revise["Nilai Selisih Num"].mean() if len(revise) else 0), "rata-rata selisih", "💬")
+def page_revise_priority(data: pd.DataFrame) -> None:
+    s = kpi_summary(data)
+    p1 = int(data["Priority"].eq("P1 - Urgent Negative").sum()) if not data.empty else 0
+    p2 = int(data["Priority"].eq("P2 - Revise Positive").sum()) if not data.empty else 0
+    thin = int(data["Gap Band"].eq("0-100rb").sum()) if not data.empty else 0
+    safe = int(data["Priority"].eq("Maintain Rate").sum() + data["Priority"].eq("Maintain High Opportunity").sum()) if not data.empty else 0
 
-    c1, c2 = st.columns(2)
-    with c1:
-        chart_card("Revise per City", count_bar(revise, "City", top_n=10, color=COLORS["yellow"]), "📍")
-    with c2:
-        chart_card("Revise per Group", count_bar(revise, "Nama Group/ Non Group", top_n=10, color=COLORS["red"]), "👥")
+    cols = st.columns(6)
+    with cols[0]:
+        kpi_card("Total Revise", f"{s['revise']}", "hotel", "✏️", "yellow")
+    with cols[1]:
+        kpi_card("Prioritas P1 Negatif", f"{p1}", "urgent", "⬇️", "red")
+    with cols[2]:
+        kpi_card("Prioritas P2", f"{p2}", "revise positif", "📈", "green")
+    with cols[3]:
+        kpi_card("Selisih Tipis", f"{thin}", "0-100rb", "≈", "yellow")
+    with cols[4]:
+        kpi_card("Sign Kontrak", f"{s['sign_kontrak']}", "finalisasi", "🖊️", "navy")
+    with cols[5]:
+        kpi_card("Hotel Aman", f"{safe}+", "maintain", "🛡️", "green")
 
-    show = revise[["City", "Nama Group/ Non Group", "Nama Hotel", "Email", "Nilai Selisih Num", "Next Action", "Checking Remarks", "Status"]].copy()
-    show["Nilai Selisih"] = show["Nilai Selisih Num"].map(lambda x: format_rp(x, compact=False))
-    show = show.drop(columns=["Nilai Selisih Num"])
-    st.dataframe(show, use_container_width=True, hide_index=True)
+    if data.empty:
+        empty_state()
+        return
 
+    regional = aggregate_by(data, "City")
+    group = aggregate_by(data, "Nama Group/ Non Group")
+    left, mid, right = st.columns([.9, 1, 1])
+    with left:
+        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+        section_header("Prioritas Negosiasi", "🎯")
+        insight_card("URGENT NEGATIVE", f"{p1} hotel perlu tindakan segera karena corporate rate lebih mahal.", "P1", "pill-red")
+        insight_card("REVISE POSITIVE", f"{p2} hotel masih punya potensi selisih positif tetapi perlu review rate.", "P2", "pill-green")
+        insight_card("SELISIH TIPIS", f"{thin} hotel berada pada band 0-100rb; cocok untuk pendekatan selektif.", "Thin Gap", "pill-yellow")
+        insight_card("AMAN", f"{safe}+ hotel dapat dipertahankan relasinya dengan maintain rate.", "Maintain", "pill-green")
+        st.markdown("</div>", unsafe_allow_html=True)
+    with mid:
+        rev_city = regional.sort_values("Revise", ascending=False).head(7)
+        chart_card("Provinsi dengan Revise Tertinggi", horizontal_bar(rev_city, "Revise", "City", "", COLORS["navy"], 470, text_format="number"), "📍")
+    with right:
+        rev_group = group.sort_values("Revise", ascending=False).head(7)
+        chart_card("Group dengan Revise Tertinggi", horizontal_bar(rev_group, "Revise", "Nama Group/ Non Group", "", COLORS["blue"], 470, text_format="number"), "👥")
 
-def page_action(data: pd.DataFrame) -> None:
-    section_title("Action Tracker", "Monitoring status, next action, dan progres tindak lanjut setiap hotel.")
-    c1, c2 = st.columns(2)
-    with c1:
-        chart_card("Status Follow-up", count_bar(data, "Status", top_n=10, color=COLORS["green"]), "✅")
-    with c2:
-        chart_card("Next Action Terbanyak", count_bar(data, "Next Action", top_n=10, color=COLORS["blue"]), "🗂️")
-
-    tracker = data[["City", "Nama Group/ Non Group", "Nama Hotel", "Result", "Next Action", "Checking Remarks", "Status", "Email"]].copy()
-    st.dataframe(tracker, use_container_width=True, hide_index=True)
-
-
-def page_explorer(data: pd.DataFrame) -> None:
-    section_title("Hotel Explorer", "Tabel eksplorasi detail seluruh hotel sesuai filter aktif.")
-    search = st.text_input("Cari detail hotel", "")
-    view = data.copy()
-    if search.strip():
-        key = search.strip().lower()
-        view = view[
-            view["Nama Hotel"].str.lower().str.contains(key, na=False)
-            | view["Nama Group/ Non Group"].str.lower().str.contains(key, na=False)
-            | view["City"].str.lower().str.contains(key, na=False)
-            | view["Email"].str.lower().str.contains(key, na=False)
+    left2, right2 = st.columns([1.5, .7])
+    with left2:
+        priority = data.sort_values(["Is Negative Gap", "Nilai Selisih"], ascending=[False, True]).head(35)[
+            ["Nama Hotel", "City", "Nama Group/ Non Group", "Nilai Selisih", "Result", "Priority", "Next Action", "Checking Remarks"]
         ]
+        dataframe_card("Daftar Hotel Prioritas", style_numeric_table(priority), "📋", 510)
+    with right2:
+        insight_card(
+            "Fokus negosiasi awal",
+            "Mulai dari hotel berselisih negatif, lalu lanjutkan ke hotel revise di wilayah padat volume. Prioritas ini menjaga nilai portofolio sekaligus mempercepat tindak lanjut kontrak.",
+            "Negotiation Focus",
+            "pill-red",
+        )
 
-    show = view[["No", "Group/ Non Group", "Nama Group/ Non Group", "City", "Nama Hotel", "Email", "Publish Rate", "Offering Corporate Rate 2026", "Nilai Selisih Num", "Result", "Next Action", "Checking Remarks", "Status"]].copy()
-    show["Nilai Selisih"] = show["Nilai Selisih Num"].map(lambda x: format_rp(x, compact=False))
-    show = show.drop(columns=["Nilai Selisih Num"])
-    st.dataframe(show, use_container_width=True, hide_index=True)
+
+def page_action_tracker(data: pd.DataFrame) -> None:
+    s = kpi_summary(data)
+    done = int(data["Next Action"].eq("Done").sum()) if not data.empty else 0
+    sign = s["sign_kontrak"]
+    follow_critical = int(data["Priority"].eq("P1 - Urgent Negative").sum()) if not data.empty else 0
+    sla_completion = safe_div(done, s["total"])
+
+    cols = st.columns(6)
+    with cols[0]:
+        kpi_card("Done", f"{done}", "selesai", "✅", "green")
+    with cols[1]:
+        kpi_card("Sign Kontrak", f"{sign}", "perlu finalisasi", "🖊️", "navy")
+    with cols[2]:
+        kpi_card("Follow-up Critical", f"{follow_critical}", "negative gap", "⚠️", "red")
+    with cols[3]:
+        kpi_card("Recommend Siap Maintain", f"{s['recommend']}", "maintain rate", "👥", "green")
+    with cols[4]:
+        kpi_card("Revise Perlu Review", f"{s['revise']}", "review rate", "✏️", "yellow")
+    with cols[5]:
+        kpi_card("SLA Completion", format_pct(sla_completion, 0), "done / total", "◔", "green")
+
+    if data.empty:
+        empty_state()
+        return
+
+    left, right = st.columns([1, 1.5])
+    with left:
+        action_counts = data["Next Action"].value_counts().reset_index()
+        action_counts.columns = ["Next Action", "Jumlah"]
+        fig = px.pie(
+            action_counts,
+            names="Next Action",
+            values="Jumlah",
+            hole=.62,
+            color="Next Action",
+            color_discrete_map={"Done": COLORS["green"], "Sign Kontrak": COLORS["navy"], "Review Rate": COLORS["yellow"]},
+        )
+        fig.update_layout(title="Status Next Action")
+        chart_card("Status Next Action", apply_plot_theme(fig, height=385), "🍩")
+    with right:
+        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+        section_header("Pipeline Tindak Lanjut", "🚦")
+        c1, c2, c3 = st.columns(3)
+        pipeline = {
+            "Maintain Rate": data[data["Priority"].str.contains("Maintain", na=False)].sort_values("Nilai Selisih", ascending=False).head(5),
+            "Review Rate": data[data["Priority"].str.contains("Revise|Negative", regex=True, na=False)].sort_values("Nilai Selisih", ascending=True).head(5),
+            "Sign Kontrak": data[data["Next Action"].eq("Sign Kontrak")].head(5),
+        }
+        for col, (title, subset) in zip([c1, c2, c3], pipeline.items()):
+            with col:
+                st.markdown(f"<span class='pill {'pill-green' if title=='Maintain Rate' else 'pill-yellow' if title=='Review Rate' else ''}'>{title} · {len(subset)}</span>", unsafe_allow_html=True)
+                for _, row in subset.iterrows():
+                    st.markdown(f"<div style='padding:9px 0;border-bottom:1px solid #E2E8F0'><b>{row['Nama Hotel']}</b><br><span style='color:#64748B;font-size:.82rem'>{row['City']} · {format_rupiah(row['Nilai Selisih'])}</span></div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    left2, right2 = st.columns([1.35, .9])
+    with left2:
+        need_action = data[data["Next Action"].ne("Done") | data["Priority"].eq("P1 - Urgent Negative")].sort_values("Nilai Selisih").head(50)[
+            ["Nama Hotel", "City", "Nama Group/ Non Group", "Next Action", "Result", "Priority", "SLA Status", "Nilai Selisih"]
+        ]
+        dataframe_card("Hotel yang Masih Memerlukan Action", style_numeric_table(need_action), "📋", 430)
+    with right2:
+        chart_card("Action berdasarkan Result", action_stacked_bar(data), "📊")
+        insight_card("Tahapan negosiasi", "Gunakan halaman ini untuk melihat action yang belum selesai, terutama Sign Kontrak dan hotel berselisih negatif yang membutuhkan review rate.", "Action Tracker", "pill-green")
 
 
-def page_quality(data: pd.DataFrame) -> None:
-    section_title("Data Quality", "Pemeriksaan kelengkapan field penting untuk menjaga dashboard tetap valid.")
-    total = len(data)
-    email_rate = data["Has Email"].mean() * 100 if total else 0
-    status_rate = (data["Status"] != "Belum Terisi").mean() * 100 if total else 0
-    action_rate = (data["Next Action"] != "Belum Terisi").mean() * 100 if total else 0
-    duplicate_hotels = data.duplicated(subset=["Nama Hotel", "City"], keep=False).sum()
+def page_hotel_explorer(data: pd.DataFrame) -> None:
+    if data.empty:
+        empty_state()
+        return
 
-    c1, c2, c3, c4 = st.columns(4)
-    with c1: kpi_card("Email Valid", f"{email_rate:.1f}%", "field kontak", "✉️")
-    with c2: kpi_card("Status Terisi", f"{status_rate:.1f}%", "progress follow-up", "✅")
-    with c3: kpi_card("Action Terisi", f"{action_rate:.1f}%", "rencana tindakan", "🗂️")
-    with c4: kpi_card("Potensi Duplikat", f"{duplicate_hotels:,.0f}", "nama hotel + city", "🧱")
-
-    c1, c2 = st.columns(2)
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    section_header("Direktori Hotel", "🔎")
+    c1, c2, c3, c4, c5 = st.columns([1.2, 1.1, 1.1, 1.1, 1])
     with c1:
-        chart_card("Missing Field Penting", missing_chart(data), "⚠️")
+        search = st.text_input("Cari hotel / email / remarks", placeholder="Ketik nama hotel, email, atau kata kunci...")
     with c2:
-        chart_card("Komposisi Group vs Non Group", result_by_group_type(data), "👥")
+        group_type = st.selectbox("Group / Non Group", option_list(data["Group/ Non Group"]), key="hotel_group_type")
+    with c3:
+        profile_group = st.selectbox("Nama Group", option_list(data["Nama Group/ Non Group"]), key="hotel_group_name")
+    with c4:
+        price_status = st.selectbox("Status Harga", option_list(data["Corporate Status"]), key="hotel_price_status")
+    with c5:
+        sort_mode = st.selectbox("Urutkan", ["Selisih tertinggi", "Selisih terendah", "Publish rate tertinggi", "Nama hotel A-Z"])
+
+    explorer = data.copy()
+    explorer = selected_filter(explorer, "Group/ Non Group", group_type)
+    explorer = selected_filter(explorer, "Nama Group/ Non Group", profile_group)
+    explorer = selected_filter(explorer, "Corporate Status", price_status)
+    if search:
+        s = search.lower().strip()
+        mask = (
+            explorer["Nama Hotel"].str.lower().str.contains(s, na=False)
+            | explorer["Email"].str.lower().str.contains(s, na=False)
+            | explorer["Checking Remarks"].str.lower().str.contains(s, na=False)
+            | explorer["City"].str.lower().str.contains(s, na=False)
+        )
+        explorer = explorer[mask]
+    if sort_mode == "Selisih tertinggi":
+        explorer = explorer.sort_values("Nilai Selisih", ascending=False)
+    elif sort_mode == "Selisih terendah":
+        explorer = explorer.sort_values("Nilai Selisih", ascending=True)
+    elif sort_mode == "Publish rate tertinggi":
+        explorer = explorer.sort_values("Publish Rate", ascending=False)
+    else:
+        explorer = explorer.sort_values("Nama Hotel")
+
+    table = explorer[
+        [
+            "Nama Hotel",
+            "City",
+            "Nama Group/ Non Group",
+            "Publish Rate",
+            "Offering Corporate Rate 2026",
+            "Nilai Selisih",
+            "Result",
+            "Next Action",
+            "Checking Remarks",
+            "Email",
+        ]
+    ].copy()
+    st.dataframe(style_numeric_table(table), use_container_width=True, hide_index=True, height=390)
+    st.caption(f"Menampilkan {len(explorer):,} dari {len(data):,} hotel pada filter explorer.".replace(",", "."))
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    left, right = st.columns([1.2, .8])
+    with left:
+        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+        section_header("Bandingkan Hotel Terpilih", "⚖️")
+        choices = explorer["Nama Hotel"].dropna().unique().tolist()
+        default_choices = choices[:3]
+        selected = st.multiselect("Pilih maksimal 5 hotel", choices, default=default_choices, max_selections=5)
+        compare = explorer[explorer["Nama Hotel"].isin(selected)].copy()
+        if not compare.empty:
+            fig = go.Figure()
+            for _, row in compare.iterrows():
+                fig.add_trace(go.Bar(name=row["Nama Hotel"], x=["Publish Rate", "Corporate Rate", "Nilai Selisih"], y=[row["Publish Rate"], row["Offering Corporate Rate 2026"], row["Nilai Selisih"]]))
+            fig.update_layout(title="Perbandingan Rate dan Selisih", barmode="group", yaxis_title="Rp")
+            st.plotly_chart(apply_plot_theme(fig, height=390), use_container_width=True, config=CONFIG)
+        else:
+            empty_state("Pilih hotel untuk dibandingkan.")
+        st.markdown("</div>", unsafe_allow_html=True)
+    with right:
+        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+        section_header("Hotel Profile", "🏨")
+        hotel_choice = st.selectbox("Pilih hotel detail", explorer["Nama Hotel"].tolist() if not explorer.empty else ["Tidak ada data"])
+        if hotel_choice != "Tidak ada data":
+            row = explorer[explorer["Nama Hotel"].eq(hotel_choice)].iloc[0]
+            color = "pill-green" if row["Result"] == "Recommend" else "pill-red" if row["Nilai Selisih"] < 0 else "pill-yellow"
+            st.markdown(f"<h3 style='margin-bottom:0'>{row['Nama Hotel']}</h3>", unsafe_allow_html=True)
+            st.markdown(f"<span style='color:#64748B'>{row['City']} · {row['Nama Group/ Non Group']}</span>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown(f"<span class='pill {color}'>{row['Result']}</span> &nbsp; <span class='pill'>{row['Next Action']}</span>", unsafe_allow_html=True)
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Publish", format_rupiah(row["Publish Rate"]))
+            c2.metric("Corporate", format_rupiah(row["Offering Corporate Rate 2026"]))
+            c3.metric("Selisih", format_rupiah(row["Nilai Selisih"]))
+            st.markdown("**Email**")
+            st.write("Tidak tersedia" if row["Email Missing"] else row["Email"])
+            st.markdown("**Checking Remarks**")
+            st.write("Tidak tersedia" if row["Remarks Missing"] else row["Checking Remarks"])
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    chart_card("Posisi Hotel dalam Band Selisih", scatter_price(explorer), "📍")
+
+
+def page_data_quality(data: pd.DataFrame, metadata: Dict[str, object]) -> None:
+    s = kpi_summary(data)
+    email_complete = 1 - safe_div(s["missing_email"], s["total"])
+    remarks_complete = 1 - safe_div(s["missing_remarks"], s["total"])
+    group_counts = data["Group/ Non Group"].value_counts()
+    g = int(group_counts.get("Group", 0))
+    ng = int(group_counts.get("Non Group", 0))
+
+    cols = st.columns(6)
+    with cols[0]:
+        kpi_card("Total Record", f"{s['total']}", "baris data", "🧱", "navy")
+    with cols[1]:
+        kpi_card("Missing Email", f"{s['missing_email']}", "perlu dilengkapi", "✉️", "red")
+    with cols[2]:
+        kpi_card("Missing Remarks", f"{s['missing_remarks']}", "perlu dilengkapi", "💬", "yellow")
+    with cols[3]:
+        kpi_card("Completeness Email", format_pct(email_complete), "validasi kontak", "✅", "green")
+    with cols[4]:
+        kpi_card("Completeness Remarks", format_pct(remarks_complete), "checking notes", "✅", "green")
+    with cols[5]:
+        kpi_card("Group vs Non Group", f"{g} vs {ng}", "komposisi", "👥", "navy")
+
+    if data.empty:
+        empty_state()
+        return
+
+    left, mid, right = st.columns([1, 1, 1])
+    with left:
+        comp = pd.DataFrame(
+            {
+                "Field": ["Email", "Checking Remarks"],
+                "Lengkap": [s["total"] - s["missing_email"], s["total"] - s["missing_remarks"]],
+                "Missing": [s["missing_email"], s["missing_remarks"]],
+            }
+        )
+        comp_melt = comp.melt(id_vars="Field", value_vars=["Lengkap", "Missing"], var_name="Status", value_name="Jumlah")
+        fig = px.bar(comp_melt, y="Field", x="Jumlah", color="Status", orientation="h", text="Jumlah", barmode="stack", color_discrete_map={"Lengkap": COLORS["green"], "Missing": COLORS["red"]})
+        fig.update_layout(title="Kelengkapan Data", xaxis_title="Jumlah", yaxis_title="")
+        chart_card("Kelengkapan Data", apply_plot_theme(fig, height=340), "✅")
+    with mid:
+        missing_group = aggregate_by(data, "Nama Group/ Non Group").sort_values("Missing Email", ascending=False).head(6)
+        chart_card("Missing Email per Group", horizontal_bar(missing_group, "Missing Email", "Nama Group/ Non Group", "", COLORS["navy"], 340, "number"), "✉️")
+    with right:
+        group_df = group_counts.reset_index()
+        group_df.columns = ["Tipe", "Jumlah"]
+        fig = px.bar(group_df, x="Jumlah", y="Tipe", color="Tipe", orientation="h", text="Jumlah", color_discrete_map={"Group": COLORS["navy"], "Non Group": COLORS["yellow"]})
+        fig.update_layout(title="Komposisi Group vs Non Group", xaxis_title="Jumlah", yaxis_title="")
+        chart_card("Komposisi Group vs Non Group", apply_plot_theme(fig, height=340, show_legend=False), "👥")
+
+    left2, right2 = st.columns([1.45, .75])
+    with left2:
+        dq = data[data["Email Missing"] | data["Remarks Missing"]][
+            ["Nama Hotel", "City", "Nama Group/ Non Group", "Email", "Checking Remarks", "Result", "Next Action"]
+        ].copy()
+        dq["Email"] = np.where(data.loc[dq.index, "Email Missing"], "Missing", dq["Email"])
+        dq["Checking Remarks"] = np.where(data.loc[dq.index, "Remarks Missing"], "Missing", dq["Checking Remarks"])
+        dataframe_card("Daftar Data yang Perlu Dilengkapi", dq.head(100), "📋", 445)
+    with right2:
+        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+        section_header("Quality Checklist", "✅")
+        checklist = [
+            ("Nama Hotel", True),
+            ("City", True),
+            ("Publish Rate", True),
+            ("Corporate Rate 2026", True),
+            ("Nilai Selisih", True),
+            ("Result", metadata.get("result_whitespace_issue", 0) == 0),
+            ("Next Action", True),
+            ("Email", s["missing_email"] == 0),
+            ("Checking Remarks", s["missing_remarks"] == 0),
+        ]
+        for label, ok in checklist:
+            badge = "pill-green" if ok else "pill-yellow"
+            text = "Lengkap" if ok else "Perlu dicek"
+            st.markdown(f"<div style='display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #E2E8F0'><b>{label}</b><span class='pill {badge}'>{text}</span></div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        if metadata.get("result_whitespace_issue", 0):
+            insight_card(
+                "Catatan cleaning kategori",
+                f"Ada {metadata.get('result_whitespace_issue', 0)} record dengan spasi tambahan pada kolom Result. Dashboard ini otomatis menormalisasi agar analisis tidak pecah kategori.",
+                "Cleaning Applied",
+                "pill-yellow",
+            )
 
 
 def page_recommendations(data: pd.DataFrame) -> None:
-    section_title("Executive Recommendations", "Rekomendasi otomatis berdasarkan pola nilai selisih, result, dan kelengkapan data.")
-    total = len(data)
-    recommend_rate = (data["Result"].eq("Recommend").mean() * 100) if total else 0
-    revise_rate = (data["Result"].eq("Revise").mean() * 100) if total else 0
-    top_city = data.groupby("City")["Nilai Selisih Num"].sum().idxmax() if total else "-"
-    top_group = data.groupby("Nama Group/ Non Group")["Nilai Selisih Num"].sum().idxmax() if total else "-"
-    missing_email = int((~data["Has Email"]).sum())
+    s = kpi_summary(data)
+    p1 = int(data["Priority"].eq("P1 - Urgent Negative").sum()) if not data.empty else 0
+    sign = s["sign_kontrak"]
 
-    note_card("1. Prioritaskan peluang terbesar", f"Fokuskan negosiasi awal pada city {top_city} dan group {top_group}, karena keduanya memberi kontribusi nilai selisih tertinggi pada data aktif.")
-    note_card("2. Kelola kategori Revise", f"Proporsi Revise saat ini sekitar {revise_rate:.1f}%. Hotel pada kategori ini perlu diperiksa ulang agar offering rate lebih kompetitif dan keputusan kontrak lebih aman.")
-    note_card("3. Perkuat kelengkapan kontak", f"Masih ada {missing_email:,.0f} baris tanpa email valid. Lengkapi field kontak agar follow-up tidak terhambat.")
-    note_card("4. Gunakan dashboard sebagai live monitoring", f"Karena sumber data sudah tersambung ke Google Sheets, update pada spreadsheet bisa langsung dipantau di dashboard setelah cache refresh.")
+    cols = st.columns(5)
+    with cols[0]:
+        kpi_card("Total Opportunity", format_rupiah(s["total_gap"]), "net selisih", "🏨", "navy")
+    with cols[1]:
+        kpi_card("Recommend", f"{s['recommend']}", "maintain rate", "✅", "green")
+    with cols[2]:
+        kpi_card("Revise", f"{s['revise']}", "review needed", "✏️", "yellow")
+    with cols[3]:
+        kpi_card("Priority Negatif", f"{p1}", "urgent", "⬇️", "red")
+    with cols[4]:
+        kpi_card("Remaining Sign Kontrak", f"{sign}", "finalisasi", "📄", "navy")
 
-    c1, c2 = st.columns(2)
-    with c1:
-        chart_card("Result Portfolio", result_donut(data), "🎯")
-    with c2:
-        chart_card("Top Opportunity Group", horizontal_bar(data, "Nama Group/ Non Group", top_n=8, color=COLORS["green"]), "💡")
+    if data.empty:
+        empty_state()
+        return
+
+    regional = aggregate_by(data, "City").sort_values("Total Selisih", ascending=False)
+    groups = aggregate_by(data, "Nama Group/ Non Group").sort_values("Total Selisih", ascending=False)
+    top_city = regional.head(3)["City"].tolist()
+    top_group = groups.head(2)["Nama Group/ Non Group"].tolist()
+    neg_hotels = data[data["Nilai Selisih"] < 0].sort_values("Nilai Selisih").head(3)["Nama Hotel"].tolist()
+
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    section_header("Ringkasan Temuan Utama", "💡")
+    insight_cols = st.columns(5)
+    with insight_cols[0]:
+        insight_card("Mayoritas hotel recommend", f"{s['recommend']} hotel dapat dipertahankan dengan maintain rate karena corporate masih kompetitif.", "Maintain", "pill-green")
+    with insight_cols[1]:
+        insight_card("Kontribusi terbesar wilayah", f"Area utama: <b>{', '.join(top_city)}</b>. Wilayah ini layak menjadi fokus optimasi rate.", "Regional", "pill-green")
+    with insight_cols[2]:
+        insight_card("Group utama", f"Group dominan: <b>{', '.join(top_group)}</b>. Pendekatan group contract bisa mempercepat follow-up.", "Group", "pill-yellow")
+    with insight_cols[3]:
+        insight_card("Hotel berselisih negatif", f"Prioritas negosiasi: <b>{', '.join(neg_hotels) if neg_hotels else '-'}</b>.", "Risk", "pill-red")
+    with insight_cols[4]:
+        insight_card("Kontrak tersisa", f"Ada {sign} hotel pada tahap Sign Kontrak; finalisasi dapat mengunci benefit 2026.", "Contract", "")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    left, right = st.columns([1.1, .9])
+    with left:
+        actions = pd.DataFrame(
+            [
+                ["Pertahankan Rate Unggul", "Maintain rate hotel recommend dan berkontribusi tinggi", "P1", "Tinggi", "Rendah"],
+                ["Negosiasi Ulang Hotel Negatif", "Fokus hotel dengan corporate rate lebih mahal dari publish", "P1", "Tinggi", "Sedang"],
+                ["Review Group Revisi Tinggi", "Cek group dengan volume revise tinggi untuk pembaruan rate", "P2", "Sedang", "Sedang"],
+                ["Selesaikan Sign Kontrak", "Finalisasi hotel pada tahap Sign Kontrak", "P2", "Tinggi", "Sedang"],
+                ["Lengkapi Data", "Prioritaskan email dan remarks missing", "P3", "Sedang", "Rendah"],
+            ],
+            columns=["Rekomendasi Tindak Lanjut", "Detail", "Prioritas", "Impact", "Effort"],
+        )
+        dataframe_card("Rekomendasi Tindak Lanjut", actions, "📋", 305)
+    with right:
+        chart_card("Impact vs Effort", impact_effort_chart(data), "🎯")
+
+    left2, right2 = st.columns([.95, 1.05])
+    with left2:
+        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+        section_header("30-60-90 Day Plan", "🗓️")
+        plan = [
+            ("30 Hari", "Fondasi & Quick Win", "Amankan rate hotel recommend berkontribusi tinggi, tindak cepat P1 negatif, lengkapi email missing."),
+            ("60 Hari", "Akselerasi & Negosiasi", "Negosiasi hotel negatif dan revise tipis, review group dengan revise tinggi, perbarui rate wilayah prioritas."),
+            ("90 Hari", "Finalisasi & Optimasi", "Finalisasi Sign Kontrak, evaluasi hasil negosiasi, susun strategi 2026+ berbasis data."),
+        ]
+        for label, title, body in plan:
+            st.markdown(f"<div style='display:flex;gap:14px;padding:12px 0;border-bottom:1px solid #E2E8F0'><div class='kpi-icon' style='width:48px;height:48px'>{label.split()[0]}</div><div><b>{title}</b><br><span style='color:#475569'>{body}</span></div></div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+    with right2:
+        target = regional.head(7)[["City", "Jumlah Hotel", "Total Selisih", "Recommend", "Revise"]].copy()
+        target["Fokus Utama"] = np.where(target["Revise"] > target["Recommend"] * 0.25, "Review & negosiasi rate", "Pertahankan rate unggul")
+        target["Potential Impact"] = target["Total Selisih"].rank(method="dense", ascending=False).map(lambda x: "★" * max(1, int(6 - min(x, 5))))
+        dataframe_card("Target Focus", style_numeric_table(target[["City", "Fokus Utama", "Total Selisih", "Potential Impact"]]), "🎯", 400)
+
+    st.markdown("<div class='footer-band'>🎯 Arah utama: maksimalkan value dari hotel berkontribusi tinggi sambil menurunkan risiko pada portofolio revise dan selisih negatif.</div>", unsafe_allow_html=True)
 
 
 # =============================================================
-# 8. MAIN APP
+# 8. MAIN APPLICATION
 # =============================================================
+
 
 def main() -> None:
     inject_css()
-    sidebar_brand()
+    page = sidebar_nav()
+    raw = data_source_selector()
+    data, metadata = clean_dataframe(raw)
 
-    try:
-        raw = load_google_sheet(GOOGLE_SHEET_CSV_URL)
-        data = prepare_data(raw)
-    except Exception as exc:
-        st.error("Google Sheets belum bisa dibaca. Pastikan akses spreadsheet diset 'Anyone with the link → Viewer', lalu reboot app.")
-        with st.expander("Detail teknis"):
-            st.write(str(exc))
-        st.stop()
+    # Sidebar quick portfolio stats.
+    s_all = kpi_summary(data)
+    st.sidebar.markdown("### 📌 Portfolio Quick Stats")
+    st.sidebar.metric("Total Hotel", f"{s_all['total']:,}".replace(",", "."))
+    st.sidebar.metric("Total Nilai Selisih", format_rupiah(s_all["total_gap"]))
+    st.sidebar.metric("Recommend / Revise", f"{s_all['recommend']} / {s_all['revise']}")
+    st.sidebar.caption("Data per: 26 Mei 2026 · Tahun analisis 2026")
 
-    if data.empty:
-        st.error("Data dari Google Sheets kosong. Pastikan baris header dan isi data sudah tersedia.")
-        st.stop()
+    page_title(page)
+    filtered, context = global_filters(data)
 
-    page = st.sidebar.radio(
-        "Menu",
-        PAGE_OPTIONS,
-        format_func=lambda x: f"{PAGE_ICONS.get(x, '')} {x}",
-        label_visibility="collapsed",
+    st.caption(
+        f"Filter aktif: City = {context['city']} · Group = {context['group']} · Result = {context['result']} · "
+        f"Next Action = {context['action']} · Band = {context['band']} · Record tampil = {len(filtered):,}".replace(",", ".")
     )
 
-    filtered = apply_filters(data)
-
-    if filtered.empty:
-        st.warning("Tidak ada data sesuai filter aktif.")
-        st.stop()
-
     if page == "01 Executive Overview":
-        page_executive(filtered)
+        page_executive_overview(filtered, metadata)
     elif page == "02 Regional Analysis":
-        page_regional(filtered)
+        page_regional_analysis(filtered)
     elif page == "03 Group Performance":
-        page_group(filtered)
+        page_group_performance(filtered)
     elif page == "04 Top Opportunity Hotels":
-        page_opportunity(filtered)
+        page_top_opportunity(filtered)
     elif page == "05 Price Gap Analytics":
         page_price_gap(filtered)
     elif page == "06 Revise Priority":
-        page_revise(filtered)
+        page_revise_priority(filtered)
     elif page == "07 Action Tracker":
-        page_action(filtered)
+        page_action_tracker(filtered)
     elif page == "08 Hotel Explorer":
-        page_explorer(filtered)
+        page_hotel_explorer(filtered)
     elif page == "09 Data Quality":
-        page_quality(filtered)
+        page_data_quality(filtered, metadata)
     elif page == "10 Executive Recommendations":
         page_recommendations(filtered)
+
+    st.markdown("---")
+    st.caption(
+        "Dashboard ini dibuat untuk analisis Corporate Rate Hotel Pertamina 2026. "
+        "Semua metrik mengikuti filter aktif dan otomatis membaca dataset langsung dari Google Sheets."
+    )
 
 
 if __name__ == "__main__":
