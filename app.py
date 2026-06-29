@@ -8,6 +8,9 @@ from __future__ import annotations
 
 import io
 import math
+import urllib.error
+import urllib.parse
+import urllib.request
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
@@ -25,12 +28,39 @@ APP_TITLE = "Dashboard Corporate Rate Hotel Pertamina 2026"
 APP_SUBTITLE = "Executive pricing intelligence untuk perpanjangan kontrak hotel"
 # Google Sheets data source.
 # Spreadsheet must be shared as: Anyone with the link -> Viewer.
+GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1aydlmGDgVhGDFgxgLeciUDBvbgCA3Z-dBSOYu6pQ8aU/edit?usp=sharing"
 GOOGLE_SHEET_ID = "1aydlmGDgVhGDFgxgLeciUDBvbgCA3Z-dBSOYu6pQ8aU"
-GOOGLE_SHEET_GID = "0"  # Ganti jika data ada di tab lain; ambil angka setelah gid= pada URL tab.
-GOOGLE_SHEETS_CSV_URL = (
-    f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEET_ID}/export"
-    f"?format=csv&gid={GOOGLE_SHEET_GID}"
-)
+
+# Kosongkan dulu supaya aplikasi membaca tab pertama yang aktif.
+# Kalau data bukan di tab pertama, isi angka setelah gid= dari URL tab Google Sheets.
+# Contoh: .../edit#gid=123456789  ->  GOOGLE_SHEET_GID = "123456789"
+GOOGLE_SHEET_GID = ""
+
+
+def build_google_sheet_csv_urls(sheet_id: str, gid: str = "") -> List[str]:
+    """Build several Google Sheets CSV URLs so the app is not stuck on one endpoint."""
+    gid = str(gid or "").strip()
+    base = f"https://docs.google.com/spreadsheets/d/{sheet_id}"
+
+    urls: List[str] = []
+
+    # Best default: no gid. Google returns the first visible sheet, even when gid=0 is invalid.
+    urls.append(f"{base}/export?format=csv")
+    urls.append(f"{base}/gviz/tq?tqx=out:csv")
+
+    # If a gid is provided, try gid-specific endpoints too.
+    if gid:
+        urls.insert(0, f"{base}/export?format=csv&id={sheet_id}&gid={gid}")
+        urls.insert(1, f"{base}/export?format=csv&gid={gid}")
+        urls.insert(2, f"{base}/gviz/tq?tqx=out:csv&gid={gid}")
+        urls.append(f"{base}/pub?gid={gid}&single=true&output=csv")
+
+    # Remove duplicates while preserving order.
+    return list(dict.fromkeys(urls))
+
+
+GOOGLE_SHEETS_CSV_URLS = build_google_sheet_csv_urls(GOOGLE_SHEET_ID, GOOGLE_SHEET_GID)
+GOOGLE_SHEETS_CSV_URL = GOOGLE_SHEETS_CSV_URLS[0]
 
 
 REQUIRED_COLUMNS = [
@@ -568,10 +598,65 @@ def inject_css() -> None:
 # =============================================================
 
 
+def _download_csv_bytes(csv_url: str) -> bytes:
+    """Download CSV with a browser-like header; Google can reject plain urllib requests."""
+    request = urllib.request.Request(
+        csv_url,
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0 Safari/537.36"
+            ),
+            "Accept": "text/csv,application/csv,text/plain,*/*",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return response.read()
+
+
+def _looks_like_google_error(content: bytes) -> bool:
+    sample = content[:500].decode("utf-8", errors="ignore").lower()
+    return any(
+        marker in sample
+        for marker in [
+            "<html",
+            "<!doctype html",
+            "servicelogin",
+            "accounts.google",
+            "document is not published",
+            "sorry, unable to open",
+        ]
+    )
+
+
 @st.cache_data(ttl=300, show_spinner=False)
-def cached_read_google_sheets(csv_url: str) -> pd.DataFrame:
-    """Read dashboard data directly from Google Sheets CSV export."""
-    return pd.read_csv(csv_url)
+def cached_read_google_sheets(csv_urls: Tuple[str, ...]) -> pd.DataFrame:
+    """Read dashboard data directly from Google Sheets CSV export.
+
+    The loader tries multiple official Google Sheets CSV endpoints because
+    /export?format=csv&gid=0 can return HTTP 400 when gid=0 is not the
+    actual visible sheet id.
+    """
+    errors: List[str] = []
+
+    for csv_url in csv_urls:
+        try:
+            content = _download_csv_bytes(csv_url)
+            if not content or _looks_like_google_error(content):
+                raise ValueError("Google returned an HTML/error page, not CSV data.")
+
+            frame = pd.read_csv(io.BytesIO(content))
+            if frame.empty:
+                raise ValueError("CSV berhasil dibuka, tetapi datanya kosong.")
+            return frame
+        except Exception as exc:
+            errors.append(f"{csv_url} -> {type(exc).__name__}: {exc}")
+
+    raise RuntimeError(
+        "Semua endpoint Google Sheets gagal dibaca. Detail percobaan:\n"
+        + "\n".join(errors)
+    )
 
 
 def clean_text_series(series: pd.Series) -> pd.Series:
@@ -1630,13 +1715,13 @@ def data_source_selector() -> pd.DataFrame:
     st.sidebar.caption("☁️ Dataset aktif: Google Sheets")
 
     try:
-        return cached_read_google_sheets(GOOGLE_SHEETS_CSV_URL)
+        return cached_read_google_sheets(tuple(GOOGLE_SHEETS_CSV_URLS))
     except Exception as exc:
         st.error(
             "Data Google Sheets gagal dibaca. Pastikan spreadsheet sudah di-share "
             "dengan akses 'Anyone with the link' sebagai Viewer, dan pastikan tab data memakai GID yang benar."
         )
-        st.info(f"URL CSV yang dibaca aplikasi: {GOOGLE_SHEETS_CSV_URL}")
+        st.info("URL CSV yang dicoba aplikasi:\n" + "\n".join(GOOGLE_SHEETS_CSV_URLS))
         st.exception(exc)
         st.stop()
 
