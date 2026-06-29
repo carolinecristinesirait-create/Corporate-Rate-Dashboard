@@ -20,12 +20,13 @@ import streamlit as st
 # 1. CONFIGURATION
 # =============================================================
 
-APP_TITLE = "Dashboard Corporate Rate Hotel Pertamina 2026"
-APP_SUBTITLE = "Executive pricing intelligence untuk perpanjangan kontrak hotel"
+# Link Google Sheets yang kamu kirim.
+GOOGLE_SHEET_SHARE_URL = "https://docs.google.com/spreadsheets/d/1aydlmGDgVhGDFgxgLeciUDBvbgCA3Z-dBSOYu6pQ8aU/edit?usp=sharing"
 
+# ID dan GID dipakai untuk membaca data sebagai CSV oleh Streamlit.
 GOOGLE_SHEET_ID = "1aydlmGDgVhGDFgxgLeciUDBvbgCA3Z-dBSOYu6pQ8aU"
 GOOGLE_SHEET_GID = "0"
-GOOGLE_SHEET_URL = f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEET_ID}/edit#gid={GOOGLE_SHEET_GID}"
+GOOGLE_SHEET_URL = GOOGLE_SHEET_SHARE_URL
 GOOGLE_SHEET_CSV_URL = f"https://docs.google.com/spreadsheets/d/{GOOGLE_SHEET_ID}/export?format=csv&gid={GOOGLE_SHEET_GID}"
 DATA_REFRESH_TTL_SECONDS = 300
 
