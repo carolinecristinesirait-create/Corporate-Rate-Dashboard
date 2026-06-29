@@ -2720,11 +2720,17 @@ def apply_plot_theme(fig: go.Figure, height: int = 360, show_legend: bool = True
             font=dict(color="#0B1F3A", size=11),
         ),
         showlegend=show_legend,
-        hoverlabel=dict(
-            bgcolor="#0B1F3A",
-            bordercolor="rgba(255,255,255,.45)",
-            font=dict(color="#FFFFFF", family="Inter, Arial, sans-serif", size=12),
-        ),
+        fig.update_layout(
+    hoverlabel=dict(
+        bgcolor="#FFFFFF",
+        bordercolor="#D7E0EA",
+        font=dict(
+            color="#0B1F3A",
+            size=12,
+            family="Inter, Arial, sans-serif"
+        )
+    )
+),
         uniformtext_minsize=10,
         uniformtext_mode="hide",
     )
