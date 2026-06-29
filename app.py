@@ -20,6 +20,9 @@ import streamlit as st
 # 1. CONFIGURATION
 # =============================================================
 
+APP_TITLE = "Dashboard Corporate Rate Hotel Pertamina 2026"
+APP_SUBTITLE = "Executive pricing intelligence untuk perpanjangan kontrak hotel"
+
 # Link Google Sheets yang kamu kirim.
 GOOGLE_SHEET_SHARE_URL = "https://docs.google.com/spreadsheets/d/1aydlmGDgVhGDFgxgLeciUDBvbgCA3Z-dBSOYu6pQ8aU/edit?usp=sharing"
 
